@@ -60,6 +60,7 @@
   $effect(() => {
     void route.path.join('/');
     preview.data = null;
+    moreOpen = false;
   });
 </script>
 

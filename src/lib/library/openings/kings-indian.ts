@@ -43,7 +43,7 @@ const opening: LibraryOpening = {
     {
       name: 'Sämisch Variation (5.f3), Panno plan',
       moves:
-        '1. d4 Nf6 2. c4 g6 3. Nc3 Bg7 4. e4 d6 5. f3 O-O 6. Be3 Nc6 7. Nge2 a6 8. Qd2 Rb8 9. h4 h5 10. O-O-O b5 11. Bh6 e5 12. Bxg7 Kxg7 13. d5 Na5',
+        '1. d4 Nf6 2. c4 g6 3. Nc3 Bg7 4. e4 d6 5. f3 O-O 6. Be3 Nc6 7. Nge2 a6 8. Qd2 Rb8 9. h4 h5 10. O-O-O b5 11. Nd5 bxc4 12. Nxf6+ Bxf6 13. Nc3',
       note: 'With kings on opposite wings, Black\'s ...b5 counterattack must be faster than White\'s h-file attack.',
     },
     {

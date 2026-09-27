@@ -2,7 +2,7 @@
   import { posFromFen, INITIAL_FEN } from '../lib/chess/moves.ts';
   import { settings } from '../lib/settings.svelte.ts';
 
-  let { fen = INITIAL_FEN, orientation = 'white', lastMove }: { fen?: string; orientation?: 'white' | 'black'; lastMove?: string } = $props();
+  let { fen = INITIAL_FEN, orientation = 'white', lastMove, boardTheme }: { fen?: string; orientation?: 'white' | 'black'; lastMove?: string; boardTheme?: string } = $props();
 
   const GLYPH: Record<string, string> = { pawn: 'p', knight: 'n', bishop: 'b', rook: 'r', queen: 'q', king: 'k' };
 
@@ -22,7 +22,7 @@
   });
 </script>
 
-<div class="mini cg-wrap board-{settings.boardTheme}">
+<div class="mini cg-wrap board-{boardTheme ?? settings.boardTheme}">
   {#each squares as s}
     <div class="sq" class:dark={s.dark} class:hl={s.hl}>
       {#if s.piece}<piece class="{s.piece[0] === 'w' ? 'white' : 'black'} {({ p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' } as Record<string, string>)[s.piece[1]]}"></piece>{/if}

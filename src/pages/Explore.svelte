@@ -10,6 +10,7 @@
   import { route, href } from '../lib/router.svelte.ts';
   import { playUci, INITIAL_FEN, type Ply } from '../lib/chess/moves.ts';
   import { moveSound } from '../lib/sound.ts';
+  import { getOpening } from '../lib/library/index.ts';
   import type { Analysis } from '../lib/engine/engine.ts';
   import type { DrawShape } from 'chessground/draw';
   import type { Key } from 'chessground/types';
@@ -29,7 +30,7 @@
   }
   const openingId = route.query.get('opening') ?? undefined;
 
-  let orientation = $state<'white' | 'black'>((route.query.get('color') as 'white' | 'black') ?? 'white');
+  let orientation = $state<'white' | 'black'>((route.query.get('color') as 'white' | 'black') ?? (openingId ? getOpening(openingId)?.side : undefined) ?? 'white');
   let engineOn = $state(false);
   let analysis = $state<Analysis | null>(null);
   let hover = $state<string | null>(null);

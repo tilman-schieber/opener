@@ -66,12 +66,12 @@ const opening: LibraryOpening = {
   ],
   traps: [
     {
-      name: 'Exchange ending: grabbing with 12.Bxd8',
+      name: '4.Qc2 d5: the c3 pin strikes',
       moves:
-        '1. d4 Nf6 2. c4 e6 3. Nc3 Bb4 4. Qc2 O-O 5. a3 Bxc3+ 6. Qxc3 b6 7. Bg5 Bb7 8. f3 h6 9. Bh4 d5 10. e3 Nbd7 11. cxd5 Nxd5 12. Bxd8 Nxc3 13. Bh4 Nd5',
+        '1. d4 Nf6 2. c4 e6 3. Nc3 Bb4 4. Qc2 d5 5. cxd5 exd5 6. Bg5 h6 7. Bh4 c5 8. dxc5 g5 9. Bg3 Ne4 10. e3 Qa5 11. Nf3 Nxc3 12. bxc3 Bxc3+ 13. Qxc3 Qxc3+',
       victim: 'white',
       explanation:
-        'Not a real loss of material but a key tactic to know: 11...Nxd5! offers the queen because ...Nxc3 wins White\'s queen back. White must then return the bishop, reaching an equal endgame. Missing this trick with 12.Qd2?? instead gets White nothing — the point is that Black is never in danger here.',
+        'In this sharp line the c3-knight is pinned twice (by the b4-bishop and the a5-queen). White must deal with it (11.Rc1 or 11.Nge2); the natural 11.Nf3? allows 11...Nxc3, and 12.bxc3 Bxc3+ wins the rook on a1 or the queen.',
     },
   ],
   positions: [

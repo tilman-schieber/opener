@@ -39,9 +39,10 @@
     </div>
     <div class="row">
       <span class="label">Board</span>
-      {#each ['brown', 'green', 'blue', 'gray'] as b}
+      {#each ['theme', 'brown', 'green', 'blue', 'gray'] as b}
         <button class="boardpick" class:on={settings.boardTheme === b} onclick={() => (settings.boardTheme = b as typeof settings.boardTheme)}>
-          <div class="board-{b}" style="width:64px"><MiniBoard /></div>
+          <div style="width:64px"><MiniBoard boardTheme={b} /></div>
+          <span class="small">{b === 'theme' ? 'theme' : b}</span>
         </button>
       {/each}
     </div>
@@ -87,7 +88,7 @@
   .swatches { display: flex; gap: 4px; }
   .swatches span { width: 26px; height: 26px; border-radius: 6px; border: 1px solid var(--border); }
   .label { min-width: 170px; font-weight: 600; }
-  .boardpick { background: none; border: 2px solid transparent; border-radius: 8px; padding: 2px; cursor: pointer; }
+  .boardpick { display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--text-muted); background: none; border: 2px solid transparent; border-radius: 8px; padding: 2px; cursor: pointer; }
   .boardpick.on { border-color: var(--accent); }
   .check { font-weight: 500; display: flex; gap: 6px; align-items: center; }
 </style>

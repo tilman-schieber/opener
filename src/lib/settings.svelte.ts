@@ -16,7 +16,7 @@ export interface Settings {
   humanMinGames: number;
   showExplorerInPlay: boolean;
   showEvalInPlay: boolean;
-  boardTheme: 'brown' | 'blue' | 'green' | 'gray';
+  boardTheme: 'theme' | 'brown' | 'blue' | 'green' | 'gray';
   sound: boolean;
 }
 
@@ -31,7 +31,7 @@ const DEFAULTS: Settings = {
   humanMinGames: 25,
   showExplorerInPlay: true,
   showEvalInPlay: false,
-  boardTheme: 'brown',
+  boardTheme: 'theme',
   sound: true,
 };
 

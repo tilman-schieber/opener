@@ -5,7 +5,7 @@
   import { BoardState } from '../lib/boardstate.svelte.ts';
   import { importLichess, importChessCom, importPgnGames, accounts, removeAccount } from '../lib/mygames/import.ts';
   import { invalidateMine, mineFilter } from '../lib/mygames/tree.ts';
-  import { settings } from '../lib/settings.svelte.ts';
+  import type { ExplorerSource } from '../lib/explorer/types.ts';
   import { auth } from '../lib/auth/lichess.svelte.ts';
   import { INITIAL_FEN } from '../lib/chess/moves.ts';
   import { moveSound } from '../lib/sound.ts';
@@ -23,6 +23,7 @@
   let color = $state<'white' | 'black'>('white');
   let hover = $state<string | null>(null);
   let version = $state(0);
+  let source = $state<ExplorerSource>('mine');
   let ctrl: AbortController | null = null;
 
   const board = new BoardState();
@@ -45,7 +46,7 @@
       else if (site === 'chesscom') n = await importChessCom(username.trim(), max, (c, m) => (progress = `${c} games… (${m})`), ctrl.signal);
       else n = await importPgnGames(pgn, username.trim() || 'upload', username.trim());
       progress = `Imported ${n} games.`;
-      settings.explorerSource = 'mine';
+      source = 'mine';
     } catch (e) {
       if ((e as Error).name !== 'AbortError') error = (e as Error).message;
     } finally {
@@ -135,7 +136,7 @@
     </div>
     <div class="right">
       {#key version}
-        <ExplorerPanel fen={board.fen} fens={[INITIAL_FEN, ...board.fens]} onmove={play} onhover={(u) => (hover = u)} myColor={color} />
+        <ExplorerPanel fen={board.fen} fens={[INITIAL_FEN, ...board.fens]} onmove={play} onhover={(u) => (hover = u)} myColor={color} bind:source />
       {/key}
       <p class="muted small">Tip: switch the explorer between <strong>My games</strong> and <strong>Lichess</strong> to compare your choices with what everyone else plays.</p>
     </div>

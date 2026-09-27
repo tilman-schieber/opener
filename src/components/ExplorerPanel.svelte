@@ -19,9 +19,11 @@
     /** Color for the "My games" source */
     myColor?: 'white' | 'black';
     compact?: boolean;
+    /** Page-local source; when omitted the global setting is used and updated */
+    source?: ExplorerSource;
   }
 
-  let { fen, fens = [], onmove, onhover, bookMoves = [], myColor = 'white', compact = false }: Props = $props();
+  let { fen, fens = [], onmove, onhover, bookMoves = [], myColor = 'white', compact = false, source: localSource = $bindable() }: Props = $props();
 
   const SOURCES: { id: ExplorerSource; label: string; needsLogin?: boolean }[] = [
     { id: 'offline', label: 'Offline' },
@@ -40,9 +42,13 @@
   offlineMeta().then((m) => (meta = m));
   loadNames().then(() => (namesReady = true));
 
-  const source = $derived<ExplorerSource>(
-    (settings.explorerSource === 'lichess' || settings.explorerSource === 'masters') && !auth.token ? 'offline' : settings.explorerSource,
-  );
+  const wanted = $derived(localSource ?? settings.explorerSource);
+  const source = $derived<ExplorerSource>((wanted === 'lichess' || wanted === 'masters') && !auth.token ? 'offline' : wanted);
+
+  function pick(s: ExplorerSource) {
+    if (localSource !== undefined) localSource = s;
+    else settings.explorerSource = s;
+  }
 
   $effect(() => {
     const q = { source, fen, ratings: [...settings.ratings], speeds: [...settings.speeds], color: myColor };
@@ -109,7 +115,7 @@
           title={s.needsLogin && !auth.token ? 'Log in with Lichess to use the live database' : ''}
           onclick={() => {
             if (s.needsLogin && !auth.token) login();
-            else settings.explorerSource = s.id;
+            else pick(s.id);
           }}>{s.label}{#if s.needsLogin && !auth.token}<span class="lock">🔒</span>{/if}</button
         >
       {/each}

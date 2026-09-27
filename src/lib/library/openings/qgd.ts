@@ -55,8 +55,8 @@ const opening: LibraryOpening = {
     {
       name: '5.Bf4 with ...c5',
       moves:
-        '1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. Nf3 Be7 5. Bf4 O-O 6. e3 c5 7. dxc5 Bxc5 8. a3 Nc6 9. Qc2 Qa5 10. Rd1 Re8 11. Nd2 e5 12. Bg5 d4',
-      note: 'Against the Bf4 system Black strikes at once with ...c5 and uses the lead in development for ...e5–d4.',
+        '1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. Nf3 Be7 5. Bf4 O-O 6. e3 c5 7. dxc5 Bxc5 8. a3 Nc6 9. Qc2 Qa5 10. Rd1 Be7 11. Be2 dxc4 12. Bxc4 Bd7 13. O-O Rac8',
+      note: 'Against the Bf4 system Black strikes at once with ...c5, develops actively with ...Qa5 and ...Bd7, and gets an easy, equal game.',
     },
   ],
   traps: [

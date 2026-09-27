@@ -7,6 +7,7 @@
   import { nameForPath, loadNames } from '../lib/explorer/names.ts';
   import WDLBar from './WDLBar.svelte';
   import Icon from './Icon.svelte';
+  import { href } from '../lib/router.svelte.ts';
 
   interface Props {
     fen: string;
@@ -186,7 +187,10 @@
         </tbody>
       </table>
     {:else}
-      <p class="muted small empty">{data.note ?? 'No games in this position.'}</p>
+      <p class="muted small empty">
+        {data.note ?? 'No games in this position.'}
+        {#if data.source === 'mine'}<a href={href('games')}>Import your games</a>{/if}
+      </p>
     {/if}
 
     {#if !compact && data.topGames?.length}

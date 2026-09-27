@@ -50,6 +50,11 @@
   });
   const lines = $derived(rep ? linesOf(rep) : []);
 
+  let recent = $state<PlayedGame[]>([]);
+  db()
+    .then((d) => d.getAllFromIndex('games', 'date'))
+    .then((g) => (recent = g.reverse().slice(0, 4)));
+
   // ---------------------------------------------------------------- game state
   type Phase = 'setup' | 'playing' | 'over';
   let phase = $state<Phase>('setup');
@@ -305,6 +310,24 @@
 
     <button class="btn primary lg" disabled={!rep || !lines.length} onclick={start}>Start game</button>
   </div>
+
+  {#if recent.length}
+    <section class="recent">
+      <div class="row"><h2>Recent games</h2><span class="spacer"></span><a class="small" href={href('history')}>All games</a></div>
+      <ul>
+        {#each recent as g}
+          {@const won = g.result !== '1/2-1/2' && g.result !== '*' && (g.result === '1-0') === (g.color === 'white')}
+          <li>
+            <a href={href(`review/${g.id}`)}>{g.repertoireName}</a>
+            <span class="faint small">{g.lineName ?? ''}</span>
+            <span class="spacer"></span>
+            <span class="chip {g.result === '1/2-1/2' ? '' : won ? 'good' : 'bad'}">{g.result === '1/2-1/2' ? 'Draw' : won ? 'Won' : 'Lost'}</span>
+            <span class="faint small">{g.leftBookPly !== undefined ? `left book at move ${Math.floor(g.leftBookPly / 2) + 1}` : 'stayed in book'}</span>
+          </li>
+        {/each}
+      </ul>
+    </section>
+  {/if}
 {:else}
   <div class="workspace">
     <div class="left">
@@ -396,6 +419,10 @@
   .setup { max-width: 720px; margin: 0 auto; padding: 28px; display: flex; flex-direction: column; gap: 18px; }
   .field { display: flex; flex-direction: column; gap: 6px; }
   .field select { width: 100%; }
+  .recent { max-width: 720px; margin: 28px auto 0; display: flex; flex-direction: column; gap: 8px; }
+  .recent h2 { font-size: 1.15rem; }
+  .recent ul { list-style: none; padding: 0; margin: 0; }
+  .recent li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--rule); margin: 0; }
   .linepreview { padding: 8px 10px; background: var(--sheet-2); border-radius: var(--radius-sm); }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   @media (max-width: 640px) { .two { grid-template-columns: 1fr; } }

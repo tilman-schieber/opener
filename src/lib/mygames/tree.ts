@@ -69,6 +69,6 @@ export async function fetchMine(fen: string, color: 'white' | 'black'): Promise<
     black: sum('black'),
     moves,
     topGames,
-    note: moves.length ? undefined : trees.white.size + trees.black.size === 0 ? 'No games imported yet — go to My Games.' : `None of your games as ${color} reached this position.`,
+    note: moves.length ? undefined : trees.white.size + trees.black.size === 0 ? 'No games imported yet.' : `None of your games as ${color} reached this position.`,
   };
 }

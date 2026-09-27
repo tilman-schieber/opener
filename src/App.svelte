@@ -30,19 +30,31 @@
     document.documentElement.dataset.mode = settings.dark === 'auto' ? (systemDark ? 'dark' : 'light') : settings.dark;
   });
 
+  // The core loop: learn an opening, play it, drill it, look things up.
   const NAV = [
     { path: '', label: 'Library' },
-    { path: 'explore', label: 'Explorer' },
     { path: 'play', label: 'Play' },
     { path: 'drill', label: 'Drill' },
-    { path: 'repertoires', label: 'Repertoires' },
-    { path: 'games', label: 'My games' },
-    { path: 'history', label: 'History' },
+    { path: 'explore', label: 'Explorer' },
+  ];
+  // Occasional tasks live in the secondary menu.
+  const MORE = [
+    { path: 'repertoires', label: 'Your repertoires', hint: 'Build, import and edit lines' },
+    { path: 'history', label: 'Game history', hint: 'Past games and reviews' },
+    { path: 'games', label: 'Import my games', hint: 'Your Lichess / Chess.com opening tree' },
+    { path: 'settings', label: 'Settings', hint: 'Appearance, opponent strength' },
   ];
 
   const page = $derived(route.path[0] ?? '');
   const activeNav = $derived(page === 'opening' ? '' : page === 'repertoire' ? 'repertoires' : page === 'review' ? 'history' : page);
+  const inMore = $derived(MORE.some((m) => m.path === activeNav));
   let menuOpen = $state(false);
+  let moreOpen = $state(false);
+  let moreEl = $state<HTMLDivElement>();
+
+  function closeOnOutside(e: MouseEvent) {
+    if (moreOpen && moreEl && !moreEl.contains(e.target as Node)) moreOpen = false;
+  }
 
   // A hovered notation chip can disappear (navigation) before its mouseleave fires
   $effect(() => {
@@ -51,7 +63,7 @@
   });
 </script>
 
-<svelte:window onscroll={() => (preview.data = null)} />
+<svelte:window onscroll={() => (preview.data = null)} onclick={closeOnOutside} onkeydown={(e) => e.key === 'Escape' && (moreOpen = false)} />
 
 <div class="shell">
   <header class="topbar">
@@ -70,15 +82,36 @@
       {#each NAV as n}
         <a href={href(n.path)} class:active={activeNav === n.path} aria-current={activeNav === n.path ? 'page' : undefined} onclick={() => (menuOpen = false)}>{n.label}</a>
       {/each}
+      <div class="more-mobile">
+        {#each MORE as m}
+          <a href={href(m.path)} class:active={activeNav === m.path} onclick={() => (menuOpen = false)}>{m.label}</a>
+        {/each}
+      </div>
     </nav>
     <div class="right">
       {#if auth.token}
-        <span class="user small" title="Logged in with Lichess"><span class="dot"></span>{auth.account?.username ?? 'Lichess'}</span>
-        <button class="btn ghost small" onclick={logout}>Log out</button>
-      {:else}
-        <button class="btn small" onclick={login}>Log in with Lichess</button>
+        <span class="user small" title="Logged in with Lichess: live explorer enabled"><span class="dot"></span>{auth.account?.username ?? 'Lichess'}</span>
       {/if}
-      <a class="btn ghost icon" href={href('settings')} title="Settings" aria-label="Settings"><Icon name="settings" size={18} /></a>
+      <div class="more" bind:this={moreEl}>
+        <button class="btn ghost more-btn" class:current={inMore} onclick={() => (moreOpen = !moreOpen)} aria-expanded={moreOpen} aria-haspopup="menu">
+          More <Icon name="chevron-down" size={14} />
+        </button>
+        {#if moreOpen}
+          <div class="menu sheet" role="menu">
+            {#each MORE as m}
+              <a role="menuitem" href={href(m.path)} class:active={activeNav === m.path} onclick={() => (moreOpen = false)}>
+                <span>{m.label}</span><span class="faint small">{m.hint}</span>
+              </a>
+            {/each}
+            <div class="sep"></div>
+            {#if auth.token}
+              <button role="menuitem" onclick={() => { moreOpen = false; logout(); }}><span>Log out of Lichess</span><span class="faint small">{auth.account?.username ?? ''}</span></button>
+            {:else}
+              <button role="menuitem" onclick={login}><span>Log in with Lichess</span><span class="faint small">Unlocks the live Lichess and Masters explorer</span></button>
+            {/if}
+          </div>
+        {/if}
+      </div>
       <button class="btn ghost icon menu-btn" onclick={() => (menuOpen = !menuOpen)} aria-label="Menu" aria-expanded={menuOpen}><Icon name="menu" size={18} /></button>
     </div>
   </header>
@@ -161,6 +194,15 @@
   .user { display: flex; align-items: center; gap: 6px; font-weight: 500; }
   .user .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
   .menu-btn { display: none; }
+  .more { position: relative; }
+  .more-btn.current { color: var(--ink); box-shadow: inset 0 -2px 0 var(--blue); border-radius: 0; }
+  .menu { position: absolute; right: 0; top: calc(100% + 6px); min-width: 280px; padding: 6px; display: flex; flex-direction: column; box-shadow: var(--shadow-lg); z-index: 40; }
+  .menu a, .menu button { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 8px 10px; border-radius: var(--radius-sm); color: var(--ink); text-decoration: none !important; font: inherit; font-size: 0.92rem; font-weight: 500; background: none; border: 0; cursor: pointer; text-align: left; }
+  .menu a:hover, .menu button:hover { background: var(--sheet-2); }
+  .menu a.active { color: var(--blue); }
+  .menu .small { font-weight: 400; }
+  .sep { height: 1px; background: var(--rule); margin: 4px 6px; }
+  .more-mobile { display: none; }
   main { flex: 1; padding: 28px 24px 48px; width: 100%; }
   footer { padding: 18px 24px; text-align: center; border-top: 1px solid var(--rule); }
   footer :global(a) { color: var(--ink-2); text-decoration: underline; text-decoration-color: var(--rule-strong); }
@@ -168,6 +210,8 @@
   @media (max-width: 960px) {
     .topbar { gap: 12px; padding: 0 16px; }
     .menu-btn { display: inline-flex; }
+    .more { display: none; }
+    .more-mobile { display: flex; flex-direction: column; border-top: 1px solid var(--rule-strong); margin-top: 6px; }
     .right { margin-left: auto; }
     nav { display: none; position: absolute; top: 56px; left: 0; right: 0; flex-direction: column; gap: 0; background: var(--sheet); border-bottom: 1px solid var(--rule); padding: 6px 16px 10px; }
     nav.open { display: flex; }

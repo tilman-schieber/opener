@@ -11,7 +11,8 @@
     "test": "vitest run",
     "build-tree": "node --experimental-strip-types scripts/build-tree.ts",
     "predev": "node scripts/copy-engine.js",
-    "prebuild": "node scripts/copy-engine.js"
+    "prebuild": "node scripts/copy-engine.js",
+    "deploy": "npm run build && node scripts/deploy-pages.js"
   },
   "dependencies": {
     "@fontsource-variable/newsreader": "^5.3.0",

@@ -1,5 +1,7 @@
 # Opener: a chess opening trainer you play
 
+Live: **https://gh.tschieber.de/opener/**
+
 Opener is a client-side web app for learning chess openings by **playing them**, not by flashcards.
 
 - **Play:** a human-like opponent follows the line you chose exactly. When the line ends, it answers with the moves
@@ -61,15 +63,19 @@ node scripts/check-library.ts --depth 14   # Stockfish flags moves in lines that
 
 ## Deploying
 
-Opener is a static site: deploy `dist/`. For the multi-threaded engine, serve with
+```sh
+npm run deploy     # builds and force-pushes dist/ to the gh-pages branch (GitHub Pages serves it)
+```
+
+GitHub Pages can't send the cross-origin isolation headers, so the live site runs the single-threaded engine, which
+the app picks automatically. On a host that can send headers (Netlify, Cloudflare Pages via `public/_headers`), use
 
 ```
 Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 ```
 
-`public/_headers` does this on Netlify and Cloudflare Pages. On GitHub Pages the app falls back to the single-threaded
-engine automatically.
+to get the multi-threaded engine.
 
 ## Design
 

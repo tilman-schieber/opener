@@ -122,7 +122,8 @@
       <div class="row">
         <button class="btn small" class:primary={engineOn} onclick={() => (engineOn = !engineOn)}>{engineOn ? 'Hide engine' : 'Show engine'}</button>
         <a class="btn small" href={href('explore', { moves: game.moves.slice(0, cursor).map((m) => m.uci).join(','), color: game.color })}>Open in explorer</a>
-        <a class="btn small primary" href={href('play', { rep: game.repertoireId })}>Play again</a>
+        <a class="btn small primary" href={href('play', { retry: game.id, at: String(cursor) })} title="Play on against the opponent from the position on the board">Retry from move {Math.floor(cursor / 2) + 1}</a>
+        <a class="btn small" href={href('play', { rep: game.repertoireId })}>New game</a>
       </div>
       {#if engineOn}<div class="sheet panel"><EngineLines {fen} enabled={engineOn} bind:analysis /></div>{/if}
     </div>

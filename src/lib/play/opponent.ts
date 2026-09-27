@@ -16,7 +16,11 @@ export interface OpponentConfig {
   engineElo: number;
   /** 'lichess' when logged in, else 'offline' */
   source: ExplorerSource;
+  /** realistic: as often as players choose it; surprise: sidelines more often; hardest: best-scoring popular reply */
+  style?: OpponentStyle;
 }
+
+export type OpponentStyle = 'realistic' | 'surprise' | 'hardest';
 
 export interface OpponentMove {
   uci: string;
@@ -27,14 +31,26 @@ export interface OpponentMove {
   reason: string;
 }
 
-/** Weighted random choice; ignores moves played in less than 3% of games so blunders stay rare. */
-export function pickWeighted(data: ExplorerData, rand = Math.random): string | undefined {
+/**
+ * Picks a database move.
+ * - realistic: proportional to how often it is played, ignoring moves under 3% so blunders stay rare
+ * - surprise: flattened weights (square root) over moves with at least 1%, so sidelines come up often
+ * - hardest: among moves with at least 5% share, the one scoring best for the side to move
+ */
+export function pickWeighted(data: ExplorerData, rand = Math.random, style: OpponentStyle = 'realistic', whiteToMove = true): string | undefined {
   const all = total(data) || data.moves.reduce((s, m) => s + total(m), 0);
-  const pool = data.moves.filter((m) => total(m) >= all * 0.03);
-  const sum = pool.reduce((s, m) => s + total(m), 0);
+  if (style === 'hardest') {
+    const pool = data.moves.filter((m) => total(m) >= all * 0.05 && total(m) >= 10);
+    const score = (m: ExplorerData['moves'][number]) => ((whiteToMove ? m.white : m.black) + m.draws / 2) / (total(m) || 1);
+    return [...pool].sort((a, b) => score(b) - score(a))[0]?.uci ?? data.moves[0]?.uci;
+  }
+  const minShare = style === 'surprise' ? 0.01 : 0.03;
+  const weight = (m: ExplorerData['moves'][number]) => (style === 'surprise' ? Math.sqrt(total(m)) : total(m));
+  const pool = data.moves.filter((m) => total(m) >= all * minShare);
+  const sum = pool.reduce((s, m) => s + weight(m), 0);
   let r = rand() * sum;
   for (const m of pool) {
-    r -= total(m);
+    r -= weight(m);
     if (r <= 0) return m.uci;
   }
   return pool[0]?.uci;
@@ -67,15 +83,17 @@ export async function chooseMove(
       const data = await explore(
         cfg.source === 'lichess'
           ? { source: 'lichess', fen, ratings: ratingBands(cfg.humanRating), speeds: ['blitz', 'rapid', 'classical'] }
-          : { source: 'offline', fen },
+          : { source: 'offline', fen, rating: cfg.humanRating },
       );
       const games = total(data);
       if (games >= cfg.humanMinGames) {
-        const uci = pickWeighted(data);
+        const style = cfg.style ?? 'realistic';
+        const uci = pickWeighted(data, Math.random, style, fen.split(' ')[1] === 'w');
         if (uci) {
           const m = data.moves.find((x) => x.uci === uci)!;
           const share = Math.round((total(m) / games) * 100);
-          return { uci, san: m.san, phase: 'human', games, reason: `Human choice: played in ${share}% of ${games.toLocaleString()} games` };
+          const label = style === 'hardest' ? 'Best-scoring reply' : style === 'surprise' ? 'Surprise choice' : 'Human choice';
+          return { uci, san: m.san, phase: 'human', games, reason: `${label}: played in ${share}% of ${games.toLocaleString()} games` };
         }
       }
     } catch {

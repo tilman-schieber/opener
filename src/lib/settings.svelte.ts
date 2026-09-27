@@ -14,6 +14,12 @@ export interface Settings {
   showExplorerInPlay: boolean;
   showEvalInPlay: boolean;
   boardTheme: 'theme' | 'brown' | 'blue' | 'green' | 'gray';
+  /** Offline explorer rating band id; null = follow humanRating */
+  offlineBand: string | null;
+  /** How the human-like opponent picks among database moves */
+  opponentStyle: 'realistic' | 'surprise' | 'hardest';
+  /** Show what players usually play here after you leave your prepared moves */
+  coach: boolean;
 }
 
 const DEFAULTS: Settings = {
@@ -27,6 +33,9 @@ const DEFAULTS: Settings = {
   showExplorerInPlay: true,
   showEvalInPlay: false,
   boardTheme: 'theme',
+  offlineBand: null,
+  opponentStyle: 'realistic',
+  coach: true,
 };
 
 const KEY = 'opener:settings';

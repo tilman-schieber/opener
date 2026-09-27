@@ -94,6 +94,19 @@ describe('opponent', () => {
     expect(counts['g2g4']).toBeUndefined();
     expect(counts['e2e4']).toBeGreaterThan(counts['d2d4']);
   });
+  it('supports surprise and hardest styles', () => {
+    // hardest: best score for White among popular moves (d4 scores 50%, e4 scores ~79%)
+    expect(pickWeighted(data, Math.random, 'hardest', true)).toBe('e2e4');
+    expect(pickWeighted(data, Math.random, 'hardest', false)).toBe('d2d4');
+    // surprise lets the 2% move in and flattens the weights
+    const counts: Record<string, number> = {};
+    for (let i = 0; i < 3000; i++) {
+      const m = pickWeighted(data, Math.random, 'surprise')!;
+      counts[m] = (counts[m] ?? 0) + 1;
+    }
+    expect(counts['g2g4']).toBeGreaterThan(0);
+    expect(counts['d2d4'] / counts['e2e4']).toBeGreaterThan(0.45);
+  });
 });
 
 describe('drill', () => {

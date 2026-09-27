@@ -15,6 +15,7 @@
   import Review from './pages/Review.svelte';
   import MyGames from './pages/MyGames.svelte';
   import Settings from './pages/Settings.svelte';
+  import Learn from './pages/Learn.svelte';
   import PreviewPopover from './components/PreviewPopover.svelte';
   import { preview } from './lib/preview.svelte.ts';
   import Icon from './components/Icon.svelte';
@@ -46,7 +47,7 @@
   ];
 
   const page = $derived(route.path[0] ?? '');
-  const activeNav = $derived(page === 'opening' ? '' : page === 'repertoire' ? 'repertoires' : page === 'review' ? 'history' : page);
+  const activeNav = $derived(page === 'opening' || page === 'learn' ? '' : page === 'repertoire' ? 'repertoires' : page === 'review' ? 'history' : page);
   const inMore = $derived(MORE.some((m) => m.path === activeNav));
   let menuOpen = $state(false);
   let moreOpen = $state(false);
@@ -127,6 +128,8 @@
         <Library />
       {:else if page === 'opening'}
         <OpeningDetail id={route.path[1]} />
+      {:else if page === 'learn'}
+        <Learn id={route.path[1]} />
       {:else if page === 'explore'}
         <Explore />
       {:else if page === 'play'}

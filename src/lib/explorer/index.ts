@@ -11,13 +11,16 @@ export interface ExplorerQuery {
   speeds?: Speed[];
   /** For source 'mine': which color the player had */
   color?: 'white' | 'black';
+  /** For source 'offline': rating to pick the band, or an explicit band id */
+  rating?: number;
+  band?: string | null;
 }
 
 const memory = new Map<string, Promise<ExplorerData>>();
 const DAY = 86_400_000;
 
 function cacheKey(q: ExplorerQuery): string {
-  return [q.source, q.fen, q.ratings?.join(','), q.speeds?.join(','), q.color].join('|');
+  return [q.source, q.fen, q.ratings?.join(','), q.speeds?.join(','), q.color, q.rating, q.band].join('|');
 }
 
 /** Fetches explorer data with an in-memory + IndexedDB cache (network sources are cached for a week). */
@@ -32,7 +35,7 @@ export function explore(q: ExplorerQuery): Promise<ExplorerData> {
 }
 
 async function load(q: ExplorerQuery, key: string): Promise<ExplorerData> {
-  if (q.source === 'offline') return fetchOffline(q.fen);
+  if (q.source === 'offline') return fetchOffline(q.fen, q.rating, q.band);
   if (q.source === 'mine') return fetchMine(q.fen, q.color ?? 'white');
   const store = await db();
   const cached = await store.get('explorer', key);

@@ -1,34 +1,47 @@
 /**
- * Builds the bundled offline opening explorer tree from a Lichess monthly database dump.
+ * Builds the bundled offline opening explorer from a Lichess monthly database dump.
  *
- *   npm run build-tree -- --games 5000000 --plies 12 --min 40
+ *   npm run build-tree -- --bands 1200-1600,1600-2200 --games 5000000 --plies 12 --deep 18 --min 40
  *
- * Streams https://database.lichess.org (curl | zstd -dc), keeps rated blitz/rapid/classical games
- * whose average rating is inside [--lo, --hi], counts results for every (position, move) pair in the
- * first --plies half-moves, then writes 256 JSON shards to public/tree/.
+ * Streams https://database.lichess.org (curl | zstd -dc) once and keeps rated blitz/rapid/classical
+ * games, sorted into rating bands by the players' average rating (up to --games per band). For every
+ * game it counts results for each (position, move) pair:
+ *   - in the first --plies half-moves for every game, and
+ *   - up to --deep half-moves while the game stays on a curated library line (transpositions
+ *     included) or at most one move away from one, so the human-like opponent lasts longer there.
+ * Each band is written as 256 JSON shards to public/tree/<lo>-<hi>/, plus public/tree/index.json.
  *
  * Counting uses lossy pruning (entries with tiny counts are dropped periodically) to keep memory
  * bounded; the error per entry is at most a few games, far below the --min output threshold.
  */
 import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
-import { mkdirSync, writeFileSync, rmSync, createReadStream } from 'node:fs';
+import { mkdirSync, writeFileSync, rmSync, renameSync, createReadStream, readdirSync, existsSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { Chess } from 'chessops/chess';
 import { parseSan } from 'chessops/san';
 import { makeUci } from 'chessops/util';
 import { fenKey, treeHash } from '../src/lib/chess/key.ts';
+import { playLine } from '../src/lib/chess/moves.ts';
+import type { LibraryOpening } from '../src/lib/library/types.ts';
 
-type Counts = Map<string, Int32Array>; // "fenKey#uci" -> [white, draws, black]
+type Counts = Map<string, Int32Array>; // "band|fenKey#uci" -> [white, draws, black]
+
+interface Band {
+  lo: number;
+  hi: number;
+  id: string;
+}
 
 interface Opts {
   month: string;
   games: number;
   plies: number;
+  deep: number;
   min: number;
   moveMin: number;
-  lo: number;
-  hi: number;
+  bands: Band[];
   out: string;
   workers: number;
   file?: string;
@@ -44,10 +57,15 @@ function parseArgs(): Opts {
     month: get('month', '2026-08'),
     games: Number(get('games', '5000000')),
     plies: Number(get('plies', '12')),
+    deep: Number(get('deep', '18')),
     min: Number(get('min', '40')),
     moveMin: Number(get('move-min', '5')),
-    lo: Number(get('lo', '1600')),
-    hi: Number(get('hi', '2200')),
+    bands: get('bands', '1200-1600,1600-2200')
+      .split(',')
+      .map((b) => {
+        const [lo, hi] = b.split('-').map(Number);
+        return { lo, hi, id: `${lo}-${hi}` };
+      }),
     out: get('out', 'public/tree'),
     workers: Number(get('workers', '8')),
     file: a.includes('--file') ? get('file', '') : undefined,
@@ -59,26 +77,38 @@ function parseArgs(): Opts {
 const PRUNE_EVERY = 400_000;
 
 function workerMain() {
-  const { plies } = workerData as { plies: number };
+  const { plies, deep, libKeys } = workerData as { plies: number; deep: number; libKeys: string[] };
+  const lib = new Set(libKeys);
   const counts: Counts = new Map();
   let sinceprune = 0;
   let pruneFloor = 1;
 
+  const add = (k: string, res: number) => {
+    let c = counts.get(k);
+    if (!c) counts.set(k, (c = new Int32Array(3)));
+    c[res]++;
+  };
+
   parentPort!.on('message', (msg: { batch?: string[]; finish?: boolean }) => {
     if (msg.batch) {
       for (const rec of msg.batch) {
-        // rec = "<resultIdx> san san san ..."
+        // rec = "<bandIdx><resultIdx> san san san ..."
         const parts = rec.split(' ');
-        const res = parts[0].charCodeAt(0) - 48; // 0 white, 1 draw, 2 black
+        const band = parts[0][0];
+        const res = parts[0].charCodeAt(1) - 48; // 0 white, 1 draw, 2 black
         const pos = Chess.default();
-        const n = Math.min(parts.length - 1, plies);
+        const n = Math.min(parts.length - 1, deep);
+        let offLine = 0;
         for (let i = 1; i <= n; i++) {
           const move = parseSan(pos, parts[i]);
           if (!move) break;
-          const k = fenKey(pos) + '#' + makeUci(move);
-          let c = counts.get(k);
-          if (!c) counts.set(k, (c = new Int32Array(3)));
-          c[res]++;
+          const key = fenKey(pos);
+          if (i > plies) {
+            // Beyond the general depth: only along library lines, allowing one step off them
+            if (lib.has(key)) offLine = 0;
+            else if (++offLine > 1) break;
+          }
+          add(band + '|' + key + '#' + makeUci(move), res);
           pos.play(move);
         }
       }
@@ -99,9 +129,23 @@ function workerMain() {
 
 // ---------------------------------------------------------------- main: stream + dispatch
 
+async function libraryKeys(): Promise<string[]> {
+  const dir = new URL('../src/lib/library/openings/', import.meta.url);
+  const keys = new Set<string>();
+  for (const f of readdirSync(dir).filter((x) => x.endsWith('.ts'))) {
+    const o = (await import(pathToFileURL(new URL(f, dir).pathname).href)).default as LibraryOpening;
+    for (const l of [...o.lines.map((x) => x.moves), ...o.traps.map((t) => t.moves)])
+      for (const p of playLine(l)) keys.add(p.fen.split(' ').slice(0, 4).join(' '));
+  }
+  return [...keys];
+}
+
 async function main() {
   const o = parseArgs();
-  console.error(`building tree: ${o.games} games, ${o.plies} plies, rating ${o.lo}-${o.hi}, min ${o.min}`);
+  const libKeys = await libraryKeys();
+  console.error(
+    `building tree: ${o.games} games per band ${o.bands.map((b) => b.id).join(', ')}, ${o.plies} plies (${o.deep} along ${libKeys.length} library positions), min ${o.min}`,
+  );
 
   let input: NodeJS.ReadableStream;
   let curl: ReturnType<typeof spawn> | undefined;
@@ -117,7 +161,10 @@ async function main() {
     input = zstd.stdout!;
   }
 
-  const workers = Array.from({ length: o.workers }, () => new Worker(new URL(import.meta.url), { workerData: { plies: o.plies } }));
+  const workers = Array.from(
+    { length: o.workers },
+    () => new Worker(new URL(import.meta.url), { workerData: { plies: o.plies, deep: o.deep, libKeys } }),
+  );
   let inflight = 0;
   const waiters: (() => void)[] = [];
   for (const w of workers)
@@ -139,7 +186,7 @@ async function main() {
   };
 
   let seen = 0;
-  let kept = 0;
+  const kept = o.bands.map(() => 0);
   let event = '';
   let welo = 0;
   let belo = 0;
@@ -161,16 +208,17 @@ async function main() {
     const avg = (welo + belo) / 2;
     const speedOk = event.includes('Blitz') || event.includes('Rapid') || event.includes('Classical');
     const resIdx = result === '1-0' ? '0' : result === '1/2-1/2' ? '1' : result === '0-1' ? '2' : '';
-    if (speedOk && resIdx && avg >= o.lo && avg <= o.hi) {
+    const bandIdx = o.bands.findIndex((b) => avg >= b.lo && avg < b.hi);
+    if (speedOk && resIdx && bandIdx >= 0 && kept[bandIdx] < o.games) {
       const sans: string[] = [];
       for (const tok of line.replace(/\{[^}]*\}/g, ' ').split(/\s+/)) {
         if (!tok || /^\d+\.+$/.test(tok) || tok === '1-0' || tok === '0-1' || tok === '1/2-1/2' || tok === '*') continue;
         sans.push(tok.replace(/^\d+\.+/, '').replace(/[?!]+$/, ''));
-        if (sans.length >= o.plies) break;
+        if (sans.length >= o.deep) break;
       }
       if (sans.length >= 2) {
-        batch.push(resIdx + ' ' + sans.join(' '));
-        kept++;
+        batch.push(String(bandIdx) + resIdx + ' ' + sans.join(' '));
+        kept[bandIdx]++;
         if (batch.length >= BATCH) await dispatch();
       }
     }
@@ -179,9 +227,9 @@ async function main() {
     result = '';
     if (seen % 1_000_000 === 0) {
       const s = (Date.now() - t0) / 1000;
-      console.error(`seen ${(seen / 1e6).toFixed(0)}M, kept ${(kept / 1e6).toFixed(2)}M, ${(seen / s / 1000).toFixed(0)}k games/s`);
+      console.error(`seen ${(seen / 1e6).toFixed(0)}M, kept ${kept.map((k, i) => `${o.bands[i].id}: ${(k / 1e6).toFixed(2)}M`).join(', ')}, ${(seen / s / 1000).toFixed(0)}k games/s`);
     }
-    if (kept >= o.games) break;
+    if (kept.every((k) => k >= o.games)) break;
   }
   if (batch.length) await dispatch();
   rl.close();
@@ -189,7 +237,7 @@ async function main() {
   zstd?.kill();
 
   while (inflight > 0) await new Promise<void>((r) => waiters.push(r));
-  console.error(`parsed ${kept} games (of ${seen}), merging…`);
+  console.error(`parsed ${kept.join(' + ')} games (of ${seen}), merging…`);
 
   const merged: Counts = new Map();
   await Promise.all(
@@ -214,59 +262,76 @@ async function main() {
     ),
   );
 
-  // group by position
-  const byPos = new Map<string, [string, number, number, number][]>();
+  // group by band and position
+  const byPos = o.bands.map(() => new Map<string, [string, number, number, number][]>());
   for (const [k, c] of merged) {
+    const band = Number(k[0]);
     const i = k.indexOf('#');
-    const pos = k.slice(0, i);
-    let arr = byPos.get(pos);
-    if (!arr) byPos.set(pos, (arr = []));
+    const pos = k.slice(2, i);
+    let arr = byPos[band].get(pos);
+    if (!arr) byPos[band].set(pos, (arr = []));
     arr.push([k.slice(i + 1), c[0], c[1], c[2]]);
   }
   merged.clear();
 
-  const shards: Record<string, Record<string, (string | number)[][]>> = {};
-  let positions = 0;
-  let moves = 0;
-  for (const [pos, arr] of byPos) {
-    const total = arr.reduce((s, m) => s + m[1] + m[2] + m[3], 0);
-    if (total < o.min) continue;
-    const keep = arr
-      .filter((m) => m[1] + m[2] + m[3] >= Math.max(o.moveMin, total * 0.002))
-      .sort((x, y) => y[1] + y[2] + y[3] - (x[1] + x[2] + x[3]));
-    if (!keep.length) continue;
-    const h = treeHash(pos);
-    (shards[h.slice(0, 2)] ??= {})[h] = keep;
-    positions++;
-    moves += keep.length;
-  }
+  const tmp = `${o.out}.new`;
+  rmSync(tmp, { recursive: true, force: true });
+  mkdirSync(tmp, { recursive: true });
+  const index: object[] = [];
+  let totalBytes = 0;
+  o.bands.forEach((band, bi) => {
+    const shards: Record<string, Record<string, (string | number)[][]>> = {};
+    let positions = 0;
+    let moves = 0;
+    for (const [pos, arr] of byPos[bi]) {
+      const total = arr.reduce((s, m) => s + m[1] + m[2] + m[3], 0);
+      if (total < o.min) continue;
+      const keep = arr
+        .filter((m) => m[1] + m[2] + m[3] >= Math.max(o.moveMin, total * 0.002))
+        .sort((x, y) => y[1] + y[2] + y[3] - (x[1] + x[2] + x[3]));
+      if (!keep.length) continue;
+      const h = treeHash(pos);
+      (shards[h.slice(0, 2)] ??= {})[h] = keep;
+      positions++;
+      moves += keep.length;
+    }
+    const dir = `${tmp}/${band.id}`;
+    mkdirSync(dir, { recursive: true });
+    let bytes = 0;
+    for (const [s, data] of Object.entries(shards)) {
+      const json = JSON.stringify(data);
+      bytes += json.length;
+      writeFileSync(`${dir}/${s}.json`, json);
+    }
+    totalBytes += bytes;
+    const meta = {
+      id: band.id,
+      source: `lichess_db_standard_rated_${o.month}`,
+      games: kept[bi],
+      plies: o.plies,
+      deepPlies: o.deep,
+      ratings: [band.lo, band.hi],
+      speeds: ['blitz', 'rapid', 'classical'],
+      minGames: o.min,
+      positions,
+      moves,
+      built: new Date().toISOString(),
+    };
+    writeFileSync(`${dir}/meta.json`, JSON.stringify(meta, null, 2));
+    index.push(meta);
+    console.error(`band ${band.id}: ${positions} positions, ${moves} moves, ${(bytes / 1e6).toFixed(1)} MB`);
+  });
+  writeFileSync(`${tmp}/index.json`, JSON.stringify({ bands: index }, null, 2));
 
-  rmSync(o.out, { recursive: true, force: true });
-  mkdirSync(o.out, { recursive: true });
-  let bytes = 0;
-  for (const [s, data] of Object.entries(shards)) {
-    const json = JSON.stringify(data);
-    bytes += json.length;
-    writeFileSync(`${o.out}/${s}.json`, json);
-  }
-  const meta = {
-    source: `lichess_db_standard_rated_${o.month}`,
-    games: kept,
-    plies: o.plies,
-    ratings: [o.lo, o.hi],
-    speeds: ['blitz', 'rapid', 'classical'],
-    minGames: o.min,
-    positions,
-    moves,
-    built: new Date().toISOString(),
-  };
-  writeFileSync(`${o.out}/meta.json`, JSON.stringify(meta, null, 2));
-  console.error(`wrote ${positions} positions, ${moves} moves, ${(bytes / 1e6).toFixed(1)} MB in ${Object.keys(shards).length} shards`);
-  console.error(`total ${((Date.now() - t0) / 60000).toFixed(1)} min`);
+  // swap in atomically-ish so the running app keeps working during the build
+  if (existsSync(o.out)) rmSync(o.out, { recursive: true, force: true });
+  renameSync(tmp, o.out);
+  console.error(`wrote ${(totalBytes / 1e6).toFixed(1)} MB total in ${((Date.now() - t0) / 60000).toFixed(1)} min`);
 }
 
-if (isMainThread) main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+if (isMainThread)
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
 else workerMain();

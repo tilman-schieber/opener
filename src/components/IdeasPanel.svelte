@@ -17,9 +17,11 @@
     onnote?: (text: string) => void;
     /** Board orientation for previews */
     orientation?: 'white' | 'black';
+    /** Hide position notes and traps (when the page already shows them) */
+    hideHere?: boolean;
   }
 
-  let { fens, preferred, comment, note, onnote, orientation }: Props = $props();
+  let { fens, preferred, comment, note, onnote, orientation, hideHere = false }: Props = $props();
 
   const ctx = $derived(ideasFor(fens, preferred));
   const current = $derived(fens[fens.length - 1] ?? INITIAL_FEN);
@@ -39,7 +41,7 @@
     {#if o}<a class="oname" href={href(`opening/${o.id}`)}>{o.name}</a>{/if}
   </div>
 
-  {#if ctx.lineNames.length || ctx.notes.length || comment}
+  {#if !hideHere && (ctx.lineNames.length || ctx.notes.length || comment)}
     <div class="note blue here">
       <div class="label">This position</div>
       {#if ctx.lineNames.length}<p>End of the prepared line <span class="name">{ctx.lineNames.join(' / ')}</span>.</p>{/if}
@@ -48,7 +50,7 @@
     </div>
   {/if}
 
-  {#each ctx.traps as t}
+  {#each hideHere ? [] : ctx.traps as t}
     <div class="note amber trap">
       <div class="label">Trap ahead: {t.name}</div>
       <MoveSeq moves={t.moves} orientation={view} from={Math.max(0, fens.length)} />

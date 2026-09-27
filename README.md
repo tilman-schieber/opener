@@ -4,10 +4,14 @@ Live: **https://gh.tschieber.de/opener/**
 
 Opener is a client-side web app for learning chess openings by **playing them**, not by flashcards.
 
+- **Learn:** a guided walkthrough of a line, one move at a time, with the curated note for each position, how often
+  players at your level choose each move, and an optional quiz mode where you play your own moves from memory.
 - **Play:** a human-like opponent follows the line you chose exactly. When the line ends, it answers with the moves
   real players at your rating choose, weighted by the opening explorer. Once the game leaves the database, Stockfish
   takes over at a strength you pick. If you leave your repertoire, a marker shows the expected move with its stats,
-  and the game goes on.
+  and the game goes on. Opponent styles: realistic, surprise me (sidelines more often), or hardest (best-scoring popular
+  reply). Once you are out of your prepared moves, a coaching card compares your move with what players do there.
+  From a review you can retry the game from any move.
 - **Explore:** a clickable opening explorer showing games, score and win/draw/loss bars. Sources are the bundled offline
   tree, the live Lichess and Masters databases (after "Log in with Lichess"), and your own games.
 - **Key ideas:** curated plans, opponent plans, pawn structures, traps and position notes for 26 openings. They are
@@ -46,11 +50,12 @@ npm test           # library validation (every move sequence legal, lines start 
 ### Building the offline tree
 
 ```sh
-npm run build-tree -- --games 5000000 --plies 12 --min 40 --lo 1600 --hi 2200 --month 2026-08
+npm run build-tree -- --bands 1200-1600,1600-2200 --games 5000000 --plies 12 --deep 18 --min 40 --month 2026-08
 ```
 
 This streams the dump (`curl | zstd -dc`, so nothing is stored on disk) and keeps rated blitz, rapid and classical
-games whose average rating falls within the range. It counts every (position, move) pair in the first `--plies`
+games, sorted into rating bands by average rating. Along the curated library lines it counts up to `--deep`
+half-moves, so the human-like opponent lasts longer in the openings you study. It counts every (position, move) pair in the first `--plies`
 half-moves across worker threads and writes 256 JSON shards keyed by a position hash, loaded lazily by the app. Five
 million games take about 45 minutes, limited by download speed.
 

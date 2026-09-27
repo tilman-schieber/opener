@@ -2,9 +2,9 @@
   import { settings } from '../lib/settings.svelte.ts';
   import { auth, login, logout } from '../lib/auth/lichess.svelte.ts';
   import MiniBoard from '../components/MiniBoard.svelte';
-  import { offlineMeta } from '../lib/explorer/offline.ts';
+  import { offlineBands } from '../lib/explorer/offline.ts';
 
-  const meta = offlineMeta();
+  const bandsP = offlineBands();
 </script>
 
 <div class="page">
@@ -47,9 +47,11 @@
     {:else}
       <p>Not logged in. The explorer uses the bundled offline tree. <button class="btn small primary" onclick={login}>Log in with Lichess</button></p>
     {/if}
-    {#await meta then m}
-      {#if m}
-        <p class="muted small">Offline tree: {m.games.toLocaleString()} games from {m.source}, ratings {m.ratings[0]}–{m.ratings[1]}, {m.speeds.join('/')}, first {m.plies} plies, {m.positions.toLocaleString()} positions.</p>
+    {#await bandsP then bands}
+      {#if bands.length}
+        {#each bands as m}
+          <p class="muted small">Offline tree {m.ratings[0]}–{m.ratings[1]}: {m.games.toLocaleString()} games from {m.source}, first {m.plies} moves (half-moves){m.deepPlies ? `, ${m.deepPlies} along library lines` : ''}, {m.positions.toLocaleString()} positions.</p>
+        {/each}
       {:else}
         <p class="muted small">Offline tree not built. Run <code>npm run build-tree</code>.</p>
       {/if}

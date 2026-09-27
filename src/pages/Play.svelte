@@ -10,7 +10,7 @@
   import WDLBar from '../components/WDLBar.svelte';
   import MoveSeq from '../components/MoveSeq.svelte';
   import { route, go, href } from '../lib/router.svelte.ts';
-  import { settings } from '../lib/settings.svelte.ts';
+  import { settings, ratingBands } from '../lib/settings.svelte.ts';
   import { auth } from '../lib/auth/lichess.svelte.ts';
   import { findRepertoire, repertoires } from '../lib/repertoire/store.svelte.ts';
   import { addLine, emptyRoot, linesOf, positionIndex, nodeAt, type Repertoire, type RepLine, type RepNode } from '../lib/repertoire/model.ts';
@@ -26,7 +26,7 @@
 
   // ---------------------------------------------------------------- setup
   let repId = $state(route.query.get('rep') ?? (route.query.get('moves') ? '' : 'lib:italian-game'));
-  const customMoves = route.query.get('moves') ?? '';
+  let customMoves = $state(route.query.get('moves') ?? '');
   let customColor = $state<'white' | 'black'>((route.query.get('color') as 'white' | 'black') ?? 'white');
   let lineChoice = $state(route.query.get('line') ?? 'random');
 
@@ -66,6 +66,8 @@
   let statusKind = $state<'book' | 'human' | 'engine' | 'info'>('book');
   let leftBook = $state<{ ply: number; expected: string[]; stats: ExplorerMove[] } | null>(null);
   let endOfLineShown = $state(false);
+  /** What players usually do in the position where you just moved outside your prepared moves */
+  let coach = $state<{ ply: number; san: string; played?: ExplorerMove; top: ExplorerMove[]; games: number; whiteToMove: boolean } | null>(null);
   let outcome = $state<Outcome & { resigned?: boolean }>({ over: false });
   let savedId = $state<string | null>(null);
   let analysis = $state<Analysis | null>(null);
@@ -80,13 +82,25 @@
   const book = $derived(rep ? positionIndex(rep.root) : new Map<string, RepNode[]>());
   const bookHere = $derived((book.get(keyOfFen(viewFen)) ?? []).map((n) => n.uci));
 
-  function start() {
+  /**
+   * Starts a game. `prefix` pre-plays moves (retrying from a reviewed position); the target line
+   * is then the repertoire line that agrees with the prefix for longest.
+   */
+  function start(prefix: PlayedMove[] = [], prior?: { leftBookPly?: number; expected?: string[] }) {
     if (!rep || !lines.length) return;
     color = rep.color;
-    target = lineChoice === 'random' ? lines[Math.floor(Math.random() * lines.length)] : (lines[Number(lineChoice)] ?? lines[0]);
-    moves = [];
-    cursor = 0;
-    leftBook = null;
+    if (prefix.length) {
+      const agree = (l: RepLine) => {
+        let i = 0;
+        while (i < prefix.length && l.ucis[i] === prefix[i].uci) i++;
+        return i;
+      };
+      target = [...lines].sort((a, b) => agree(b) - agree(a))[0];
+    } else target = lineChoice === 'random' ? lines[Math.floor(Math.random() * lines.length)] : (lines[Number(lineChoice)] ?? lines[0]);
+    moves = prefix;
+    cursor = prefix.length;
+    leftBook = prior?.leftBookPly !== undefined && prior.leftBookPly < prefix.length ? { ply: prior.leftBookPly, expected: prior.expected ?? [], stats: [] } : null;
+    coach = null;
     endOfLineShown = false;
     outcome = { over: false };
     savedId = null;
@@ -99,13 +113,41 @@
       humanMinGames: settings.humanMinGames,
       engineElo: settings.engineElo,
       source: auth.token ? 'lichess' : 'offline',
+      style: settings.opponentStyle,
     };
     getPlayEngine().newGame();
     phase = 'playing';
-    status = target.name ? `Line: ${target.name}` : 'Your repertoire';
+    status = prefix.length ? `Retrying from move ${Math.floor(prefix.length / 2) + 1}` : target.name ? `Line: ${target.name}` : 'Your repertoire';
     statusKind = 'book';
-    if (color === 'black') opponentMove();
+    if (turnOf(liveFen) !== color) opponentMove();
   }
+
+  // Retry a reviewed game from a given ply: #/play?retry=<gameId>&at=<plies>
+  const retryId = route.query.get('retry');
+  let retried = false;
+  if (retryId)
+    db()
+      .then((d) => d.get('games', retryId))
+      .then((g) => {
+        if (!g) return;
+        const at = Math.min(Number(route.query.get('at') ?? g.moves.length), g.moves.length);
+        if (g.repertoireId === 'custom') {
+          customMoves = g.moves.slice(0, g.leftBookPly ?? at).map((m) => m.uci).join(',');
+          customColor = g.color;
+          repId = '';
+        } else repId = g.repertoireId;
+        const go = () => {
+          if (retried || !rep) return false;
+          retried = true;
+          start(g.moves.slice(0, at), { leftBookPly: g.leftBookPly, expected: g.expected });
+          return true;
+        };
+        if (!go()) {
+          // user repertoires may still be loading
+          const t = setInterval(() => go() && clearInterval(t), 100);
+          setTimeout(() => clearInterval(t), 5000);
+        }
+      });
 
   function push(m: PlayedMove) {
     moves = [...moves, m];
@@ -128,14 +170,37 @@
     if (!leftBook && expected.length && !expected.some((n) => n.uci === p.uci)) {
       const exp = expected.map((n) => uciToSan(fen, n.uci));
       leftBook = { ply, expected: exp, stats: [] };
-      explore(config.source === 'lichess' ? { source: 'lichess', fen, ratings: settings.ratings, speeds: settings.speeds } : { source: 'offline', fen })
+      dbQuery(fen)
         .then((d) => {
           if (leftBook?.ply === ply) leftBook.stats = d.moves.filter((m) => m.uci === p.uci || expected.some((n) => n.uci === m.uci));
+        })
+        .catch(() => {});
+    } else if (settings.coach && !expected.length) {
+      // Out of your prepared moves: compare your choice with what players do here
+      coach = null;
+      dbQuery(fen)
+        .then((d) => {
+          const games = total(d) || d.moves.reduce((s, m) => s + total(m), 0);
+          if (games < 20 || moves.length <= ply || moves[ply].uci !== p.uci) return;
+          coach = { ply, san: p.san, played: d.moves.find((m) => m.uci === p.uci), top: d.moves.slice(0, 3), games, whiteToMove: turnOf(fen) === 'white' };
         })
         .catch(() => {});
     }
     push({ ...p, phase: 'player' });
     if (!outcome.over) opponentMove();
+  }
+
+  function dbQuery(fen: string) {
+    return explore(
+      config.source === 'lichess'
+        ? { source: 'lichess', fen, ratings: ratingBands(config.humanRating), speeds: ['blitz', 'rapid', 'classical'] }
+        : { source: 'offline', fen, rating: config.humanRating },
+    );
+  }
+
+  /** Score of a database move for the side that played it, in percent */
+  function scoreFor(m: ExplorerMove, whiteToMove: boolean) {
+    return Math.round((((whiteToMove ? m.white : m.black) + m.draws / 2) / (total(m) || 1)) * 100);
   }
 
   async function opponentMove() {
@@ -179,6 +244,7 @@
     moves = moves.slice(0, Math.max(0, n));
     cursor = moves.length;
     if (leftBook && leftBook.ply >= moves.length) leftBook = null;
+    if (coach && coach.ply >= moves.length) coach = null;
     if (endOfLineShown) endOfLineShown = false;
     stage.outOfDb = false;
     thinking = false;
@@ -298,12 +364,27 @@
       </div>
     </div>
 
+    <div class="field">
+      <span class="lbl">Opponent style once your line ends</span>
+      <div class="seg" role="group" aria-label="Opponent style">
+        <button class:on={settings.opponentStyle === 'realistic'} onclick={() => (settings.opponentStyle = 'realistic')}>Realistic</button>
+        <button class:on={settings.opponentStyle === 'surprise'} onclick={() => (settings.opponentStyle = 'surprise')}>Surprise me</button>
+        <button class:on={settings.opponentStyle === 'hardest'} onclick={() => (settings.opponentStyle = 'hardest')}>Hardest</button>
+      </div>
+      <p class="muted small">
+        {#if settings.opponentStyle === 'realistic'}Moves as often as real players choose them.
+        {:else if settings.opponentStyle === 'surprise'}Sidelines come up much more often, so you practise the rarer replies.
+        {:else}Always the popular reply that scores best against you.{/if}
+      </p>
+    </div>
+
     <div class="row">
+      <label class="check"><input type="checkbox" bind:checked={settings.coach} /> Show what players do after you leave your moves</label>
       <label class="check"><input type="checkbox" bind:checked={settings.showExplorerInPlay} /> Show explorer during the game</label>
       <label class="check"><input type="checkbox" bind:checked={settings.showEvalInPlay} /> Show evaluation</label>
     </div>
 
-    <button class="btn primary lg" disabled={!rep || !lines.length} onclick={start}>Start game</button>
+    <button class="btn primary lg" disabled={!rep || !lines.length} onclick={() => start()}>Start game</button>
   </div>
 
   {#if recent.length}
@@ -362,6 +443,35 @@
         </div>
       {/if}
 
+      {#if coach && phase === 'playing'}
+        {@const c = coach}
+        <div class="note coach">
+          <div class="row">
+            <span class="label">Players here</span>
+            <span class="spacer"></span>
+            <span class="faint small">{c.games.toLocaleString()} games</span>
+            <button class="btn ghost icon" onclick={() => (coach = null)} aria-label="Hide"><Icon name="x" size={14} /></button>
+          </div>
+          <table>
+            <tbody>
+              {#each c.top as m}
+                <tr class:mine={m.uci === c.played?.uci}>
+                  <td class="san">{m.san}</td>
+                  <td class="num">{Math.round((total(m) / c.games) * 100)}%</td>
+                  <td class="num">scores {scoreFor(m, c.whiteToMove)}%</td>
+                  <td class="faint small">{m.uci === c.played?.uci ? 'your move' : ''}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+          {#if !c.played}
+            <p class="small">Your <span class="san">{c.san}</span> is rare here: almost nobody at this level plays it.</p>
+          {:else if !c.top.some((m) => m.uci === c.played?.uci)}
+            <p class="small">Your <span class="san">{c.san}</span>: {Math.round((total(c.played) / c.games) * 100)}% of players, scores {scoreFor(c.played, c.whiteToMove)}%.</p>
+          {/if}
+        </div>
+      {/if}
+
       {#if phase === 'over'}
         <div class="result card">
           <h2>{resultText}</h2>
@@ -372,7 +482,7 @@
           {/if}
           <div class="row">
             {#if savedId}<a class="btn primary" href={href(`review/${savedId}`)}>Review game</a>{/if}
-            <button class="btn" onclick={start}>Play another line</button>
+            <button class="btn" onclick={() => start()}>Play another line</button>
             <button class="btn" onclick={() => (phase = 'setup')}>Change setup</button>
           </div>
         </div>
@@ -414,6 +524,13 @@
   .setup { max-width: 720px; margin: 0 auto; padding: 28px; display: flex; flex-direction: column; gap: 18px; }
   .field { display: flex; flex-direction: column; gap: 6px; }
   .field select { width: 100%; }
+  .lbl { font-size: 0.88rem; font-weight: 500; }
+  .field .seg { align-self: flex-start; }
+  .coach { display: flex; flex-direction: column; gap: 6px; }
+  .coach table { border-collapse: collapse; font-size: 0.88rem; align-self: flex-start; }
+  .coach td { padding: 2px 10px 2px 0; }
+  .coach td.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; }
+  .coach tr.mine td { color: var(--blue); font-weight: 600; }
   .recent { max-width: 720px; margin: 28px auto 0; display: flex; flex-direction: column; gap: 8px; }
   .recent h2 { font-size: 1.15rem; }
   .recent ul { list-style: none; padding: 0; margin: 0; }

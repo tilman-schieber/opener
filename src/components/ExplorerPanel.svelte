@@ -3,7 +3,7 @@
   import { total, type ExplorerData, type ExplorerMove, type ExplorerSource } from '../lib/explorer/types.ts';
   import { settings } from '../lib/settings.svelte.ts';
   import { auth, login } from '../lib/auth/lichess.svelte.ts';
-  import { offlineMeta, type OfflineMeta } from '../lib/explorer/offline.ts';
+  import { offlineBands, pickBand, type OfflineBand } from '../lib/explorer/offline.ts';
   import { nameForPath, loadNames } from '../lib/explorer/names.ts';
   import WDLBar from './WDLBar.svelte';
   import Icon from './Icon.svelte';
@@ -37,11 +37,12 @@
   let data = $state<ExplorerData | null>(null);
   let error = $state<string | null>(null);
   let loading = $state(false);
-  let meta = $state<OfflineMeta | null>(null);
+  let bands = $state<OfflineBand[]>([]);
   let showFilters = $state(false);
   let namesReady = $state(false);
 
-  offlineMeta().then((m) => (meta = m));
+  offlineBands().then((b) => (bands = b));
+  const band = $derived(pickBand(bands, settings.humanRating, settings.offlineBand));
   loadNames().then(() => (namesReady = true));
 
   const wanted = $derived(localSource ?? settings.explorerSource);
@@ -53,7 +54,7 @@
   }
 
   $effect(() => {
-    const q = { source, fen, ratings: [...settings.ratings], speeds: [...settings.speeds], color: myColor };
+    const q = { source, fen, ratings: [...settings.ratings], speeds: [...settings.speeds], color: myColor, rating: settings.humanRating, band: band?.id };
     let cancelled = false;
     loading = true;
     error = null;
@@ -149,8 +150,17 @@
         </div>
       {/if}
     </div>
-  {:else if source === 'offline' && meta}
-    <div class="muted small src-note">Bundled: {fmt(meta.games)} Lichess games rated {meta.ratings[0]}–{meta.ratings[1]}, first {meta.plies} plies.</div>
+  {:else if source === 'offline' && band}
+    <div class="row src-note">
+      {#if bands.length > 1}
+        <div class="seg" role="group" aria-label="Rating band">
+          {#each bands as b}
+            <button class:on={b.id === band.id} onclick={() => (settings.offlineBand = b.id)}>{b.ratings[0]}–{b.ratings[1]}</button>
+          {/each}
+        </div>
+      {/if}
+      <span class="faint small">{fmt(band.games)} Lichess games{bands.length > 1 ? '' : ` rated ${band.ratings[0]}–${band.ratings[1]}`}</span>
+    </div>
   {/if}
 
   {#if error}
@@ -242,7 +252,7 @@
   .filters { margin: -4px 0 6px; }
   .filter-box { display: flex; flex-direction: column; gap: 6px; padding: 8px; background: var(--sheet-2); border-radius: var(--radius-sm); margin-top: 4px; }
   .filter-box .chip { cursor: pointer; }
-  .src-note { margin: -4px 0 6px; }
+  .src-note { margin: -2px 0 8px; }
   .empty { margin: 8px 0 0; }
   .games { margin-top: 10px; font-size: 0.88rem; }
   .games summary { cursor: pointer; font-weight: 500; color: var(--ink-2); }

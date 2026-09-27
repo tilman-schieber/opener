@@ -47,7 +47,8 @@
         <MoveSeq moves={o.base} orientation={o.side} />
       </div>
       <div class="row actions">
-        <a class="btn primary lg" href={href('play', { rep: `lib:${o.id}`, line: String(selected) })}>Play this line</a>
+        <a class="btn primary lg" href={href(`learn/${o.id}`, { line: String(selected) })}>Learn this line</a>
+        <a class="btn lg" href={href('play', { rep: `lib:${o.id}`, line: String(selected) })}>Play</a>
         <a class="btn lg" href={href('drill', { rep: `lib:${o.id}` })}>Drill</a>
         <a class="btn lg" href={exploreHref(o.lines[selected].moves)}>Explore</a>
         {#if existing}

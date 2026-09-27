@@ -1,0 +1,20 @@
+{
+  "id": "1600-2200",
+  "source": "lichess_db_standard_rated_2026-08",
+  "games": 5000000,
+  "plies": 12,
+  "deepPlies": 18,
+  "ratings": [
+    1600,
+    2200
+  ],
+  "speeds": [
+    "blitz",
+    "rapid",
+    "classical"
+  ],
+  "minGames": 40,
+  "positions": 67803,
+  "moves": 230490,
+  "built": "2026-09-27T22:20:20.447Z"
+}

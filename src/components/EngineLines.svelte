@@ -76,6 +76,6 @@
   .lines { display: flex; flex-direction: column; gap: 3px; }
   .line { display: flex; gap: 8px; font-size: 0.85rem; white-space: nowrap; overflow: hidden; }
   .score { font-family: var(--font-mono); font-weight: 800; min-width: 3.4em; text-align: right; }
-  .score.neg { color: var(--text-muted); }
-  .pv { font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; color: var(--text-muted); }
+  .score.neg { color: var(--ink-2); }
+  .pv { font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; color: var(--ink-2); }
 </style>

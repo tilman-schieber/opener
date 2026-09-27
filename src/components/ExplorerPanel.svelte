@@ -6,6 +6,7 @@
   import { offlineMeta, type OfflineMeta } from '../lib/explorer/offline.ts';
   import { nameForPath, loadNames } from '../lib/explorer/names.ts';
   import WDLBar from './WDLBar.svelte';
+  import Icon from './Icon.svelte';
 
   interface Props {
     fen: string;
@@ -105,8 +106,8 @@
   }
 </script>
 
-<div class="card panel explorer" class:compact>
-  <div class="panel-title">
+<section class="sheet panel explorer" class:compact>
+  <div class="panel-head">
     <h3>Explorer</h3>
     <div class="seg" role="tablist">
       {#each SOURCES as s}
@@ -116,20 +117,21 @@
           onclick={() => {
             if (s.needsLogin && !auth.token) login();
             else pick(s.id);
-          }}>{s.label}{#if s.needsLogin && !auth.token}<span class="lock">🔒</span>{/if}</button
+          }}
+          class:locked={s.needsLogin && !auth.token}>{s.label}</button
         >
       {/each}
     </div>
   </div>
 
   {#if opening}
-    <div class="opening"><span class="chip">{opening.eco}</span> <span class="name">{opening.name}</span></div>
+    <div class="opening"><span class="chip eco">{opening.eco}</span> <span class="name">{opening.name}</span></div>
   {/if}
 
   {#if source === 'lichess'}
     <div class="filters">
       <button class="btn ghost small" onclick={() => (showFilters = !showFilters)}>
-        {settings.ratings.join(', ')} · {settings.speeds.join(', ')} ▾
+        Ratings {settings.ratings.join(', ')} · {settings.speeds.join(', ')} <Icon name="chevron-down" size={14} />
       </button>
       {#if showFilters}
         <div class="filter-box">
@@ -169,7 +171,7 @@
               onmouseenter={() => onhover?.(m.uci)}
               onmouseleave={() => onhover?.(null)}
             >
-              <td class="san">{m.san}{#if bookMoves.includes(m.uci)}<span class="book-dot" title="In your repertoire">●</span>{/if}</td>
+              <td class="san">{m.san}{#if bookMoves.includes(m.uci)}<span class="chip accent rep" title="In your repertoire">rep</span>{/if}</td>
               <td class="num"><span class="muted">{share(m)}%</span> {fmt(total(m))}</td>
               <td class="num">{score(m)}%</td>
               <td class="bar-col"><WDLBar white={m.white} draws={m.draws} black={m.black} height={16} /></td>
@@ -210,37 +212,39 @@
 
   {#if !auth.token && !compact}
     <p class="login-hint small muted">
-      <button class="linklike" onclick={login}>Log in with Lichess</button> to unlock the full Lichess & Masters databases (free account, stays in your browser).
+      <button class="linklike" onclick={login}>Log in with Lichess</button> for the full Lichess and Masters databases. A free account is enough, and the login stays in your browser.
     </p>
   {/if}
-</div>
+</section>
 
 <style>
   .explorer { min-width: 0; }
   .opening { margin-bottom: 8px; font-weight: 600; display: flex; gap: 6px; align-items: center; }
-  .opening .name { font-family: var(--font-display); }
-  .lock { font-size: 0.7em; margin-left: 3px; opacity: 0.7; }
+  .opening .name { font-family: var(--font-display); font-style: italic; font-size: 1.05rem; font-weight: 500; }
+  .seg button.locked { color: var(--ink-3); }
   table { width: 100%; border-collapse: collapse; font-size: 0.9rem; transition: opacity 0.15s; }
   table.loading { opacity: 0.55; }
-  th { text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); font-weight: 700; padding: 4px 6px; }
-  td { padding: 5px 6px; border-top: 1px solid var(--border); white-space: nowrap; }
+  th { text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-2); font-weight: 700; padding: 4px 6px; }
+  td { padding: 5px 6px; border-top: 1px solid var(--rule); white-space: nowrap; }
   .num { text-align: right; font-variant-numeric: tabular-nums; }
   .bar-col { width: 45%; min-width: 120px; }
   tr.clickable { cursor: pointer; }
-  tr.clickable:hover td { background: var(--surface-2); }
-  tr.book td:first-child { color: var(--accent); }
-  .book-dot { color: var(--accent); font-size: 0.6rem; margin-left: 4px; vertical-align: middle; }
-  tr.total td { font-weight: 700; color: var(--text-muted); }
+  tr.clickable:hover td { background: var(--sheet-2); }
+  tr.book td:first-child { color: var(--blue); }
+  .rep { margin-left: 6px; font-family: var(--font-body); font-size: 0.66rem; padding: 0 0.4em; }
+  td.san { font-family: var(--font-mono); }
+  .num { font-family: var(--font-mono); font-size: 0.84rem; }
+  tr.total td { font-weight: 700; color: var(--ink-2); }
   .filters { margin: -4px 0 6px; }
-  .filter-box { display: flex; flex-direction: column; gap: 6px; padding: 8px; background: var(--surface-2); border-radius: var(--radius-sm); margin-top: 4px; }
+  .filter-box { display: flex; flex-direction: column; gap: 6px; padding: 8px; background: var(--sheet-2); border-radius: var(--radius-sm); margin-top: 4px; }
   .filter-box .chip { cursor: pointer; }
   .src-note { margin: -4px 0 6px; }
   .empty { margin: 8px 0 0; }
   .games { margin-top: 10px; font-size: 0.88rem; }
-  .games summary { cursor: pointer; font-weight: 600; color: var(--text-muted); }
+  .games summary { cursor: pointer; font-weight: 500; color: var(--ink-2); }
   .games ul { list-style: none; padding: 0; margin: 6px 0 0; }
   .login-hint { margin: 10px 0 0; }
-  .linklike { background: none; border: 0; padding: 0; font: inherit; color: var(--accent); cursor: pointer; font-weight: 600; }
+  .linklike { background: none; border: 0; padding: 0; font: inherit; color: var(--blue); cursor: pointer; font-weight: 600; }
   .compact td { padding: 3px 5px; }
   .compact .bar-col { width: 40%; }
 </style>

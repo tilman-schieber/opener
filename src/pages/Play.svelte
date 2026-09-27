@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from '../components/Icon.svelte';
   import Board from '../components/Board.svelte';
   import MoveList from '../components/MoveList.svelte';
   import ExplorerPanel from '../components/ExplorerPanel.svelte';
@@ -236,7 +237,6 @@
     return `${who} ${why}`;
   });
 
-  const icon = { book: '📖', human: '👥', engine: '🤖', info: '🏁' } as const;
 
   function nextLine() {
     lineChoice = 'random';
@@ -270,7 +270,7 @@
       <div class="field">
         <label for="line">Line</label>
         <select id="line" bind:value={lineChoice}>
-          <option value="random">🎲 Random line ({lines.length})</option>
+          <option value="random">Random line ({lines.length} in this repertoire)</option>
           {#each lines as l, i}
             <option value={String(i)}>{l.name ? `${l.name} — ` : ''}{formatLine(l.sans.slice(0, 10))}{l.sans.length > 10 ? ' …' : ''}</option>
           {/each}
@@ -299,13 +299,13 @@
       <label class="check"><input type="checkbox" bind:checked={settings.showEvalInPlay} /> Show evaluation</label>
     </div>
 
-    <button class="btn primary lg" disabled={!rep || !lines.length} onclick={start}>⚔️ Start game</button>
+    <button class="btn primary lg" disabled={!rep || !lines.length} onclick={start}>Start game</button>
   </div>
 {:else}
   <div class="workspace">
     <div class="left">
       <div class="status {statusKind}">
-        <span class="ic">{icon[statusKind]}</span>
+        <span class="dot"></span>
         <span class="txt">{thinking ? 'Opponent is thinking…' : status}</span>
       </div>
       <div class="board-row">
@@ -336,7 +336,7 @@
               {/each}
             </div>
           {/if}
-          <button class="btn small" onclick={takeBack}>↶ Take back</button>
+          <button class="btn small" onclick={takeBack}><Icon name="undo" /> Take back</button>
         </div>
       {/if}
 
@@ -346,23 +346,23 @@
           {#if leftBook}
             <p class="muted">You left the book at move {Math.floor(leftBook.ply / 2) + 1} (expected {leftBook.expected.join(' / ')}).</p>
           {:else}
-            <p class="muted">You stayed in your repertoire the whole way. 👏</p>
+            <p class="muted">You stayed in your repertoire the whole way.</p>
           {/if}
           <div class="row">
-            {#if savedId}<a class="btn primary" href={href(`review/${savedId}`)}>🔍 Review game</a>{/if}
-            <button class="btn" onclick={start}>↻ Same setup, new line</button>
-            <button class="btn" onclick={() => (phase = 'setup')}>⚙ Change setup</button>
+            {#if savedId}<a class="btn primary" href={href(`review/${savedId}`)}>Review game</a>{/if}
+            <button class="btn" onclick={start}>Play another line</button>
+            <button class="btn" onclick={() => (phase = 'setup')}>Change setup</button>
           </div>
         </div>
       {/if}
 
       <div class="row tools">
         {#if phase === 'playing'}
-          <button class="btn small" onclick={takeBack} disabled={thinking || moves.length < 1}>↶ Take back</button>
-          <button class="btn small danger" onclick={resign}>⚑ Resign</button>
+          <button class="btn small" onclick={takeBack} disabled={thinking || moves.length < 1}><Icon name="undo" /> Take back</button>
+          <button class="btn small danger" onclick={resign}><Icon name="flag" /> Resign</button>
         {/if}
         <button class="btn small" class:primary={settings.showEvalInPlay} onclick={() => (settings.showEvalInPlay = !settings.showEvalInPlay)}>
-          {settings.showEvalInPlay ? '🙈 Hide eval' : '👁 Show eval'}
+          <Icon name={settings.showEvalInPlay ? 'eye-off' : 'eye'} /> {settings.showEvalInPlay ? 'Hide evaluation' : 'Show evaluation'}
         </button>
         <button class="btn small" onclick={() => (settings.showExplorerInPlay = !settings.showExplorerInPlay)}>
           {settings.showExplorerInPlay ? 'Hide explorer' : 'Show explorer'}
@@ -371,13 +371,13 @@
         <span class="muted small">{rep?.name}{target?.name ? ` · ${target.name}` : ''}</span>
       </div>
       {#if settings.showEvalInPlay}
-        <div class="card panel"><EngineLines fen={viewFen} enabled={settings.showEvalInPlay} bind:analysis multipv={2} depth={18} /></div>
+        <div class="sheet panel"><EngineLines fen={viewFen} enabled={settings.showEvalInPlay} bind:analysis multipv={2} depth={18} /></div>
       {/if}
     </div>
 
     <div class="right">
-      <div class="card panel">
-        <div class="panel-title"><h3>Moves</h3><span class="legend small muted"><span class="lg book">book</span> <span class="lg human">human-like</span> <span class="lg engine">engine</span></span></div>
+      <div class="sheet panel">
+        <div class="panel-head"><h3>Moves</h3><span class="legend small muted"><span class="lg book">book</span> <span class="lg human">human-like</span> <span class="lg engine">engine</span></span></div>
         <MoveList plies={moves} {cursor} onselect={(i) => (cursor = i)} {marks} empty="Waiting for the first move…" />
       </div>
       {#if settings.showExplorerInPlay}
@@ -389,29 +389,22 @@
 {/if}
 
 <style>
-  .setup { max-width: 720px; margin: 0 auto; padding: 26px 28px; display: flex; flex-direction: column; gap: 16px; }
-  .setup h1 { margin: 0; }
+  .setup { max-width: 720px; margin: 0 auto; padding: 28px; display: flex; flex-direction: column; gap: 18px; }
   .field { display: flex; flex-direction: column; gap: 6px; }
   .field select { width: 100%; }
   .field p { margin: 0; }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   @media (max-width: 640px) { .two { grid-template-columns: 1fr; } }
-  input[type='range'] { width: 100%; accent-color: var(--accent); }
+  input[type='range'] { width: 100%; accent-color: var(--blue); }
   .check { font-weight: 500; display: flex; gap: 6px; align-items: center; }
-  .status { display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-radius: var(--radius-sm); font-weight: 600; background: var(--surface-2); min-height: 40px; }
-  .status.book { background: var(--accent-soft); color: var(--accent); }
-  .status.human { background: var(--good-soft); color: var(--good); }
-  .status.engine { background: var(--surface-3); }
-  .status.info { background: var(--warn-soft); color: var(--warn); }
   .board-row { display: flex; gap: 8px; }
   .grow { flex: 1; min-width: 0; }
-  .leftbook { padding: 12px 14px; border-left: 4px solid var(--warn); display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+  .leftbook { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
   .lb-stats { width: 100%; display: flex; flex-direction: column; gap: 4px; }
   .lb-stats .san { min-width: 3.5em; }
-  .result { padding: 16px 18px; border-left: 4px solid var(--accent); }
-  .result h2 { margin: 0 0 4px; }
+  .result { padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
   .tools { gap: 6px; }
-  .legend { display: flex; gap: 8px; }
-  .lg.book { color: var(--accent); font-weight: 700; }
-  .lg.engine { font-style: italic; }
+  .legend { display: flex; gap: 10px; }
+  .lg.book { color: var(--blue); font-weight: 600; }
+  .lg.engine { color: var(--ink-2); }
 </style>

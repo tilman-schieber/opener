@@ -6,16 +6,16 @@
 </script>
 
 <select bind:value>
-  {#if allowCustom}<option value="">— Custom line from the explorer —</option>{/if}
+  {#if allowCustom}<option value="">Line from the explorer</option>{/if}
   {#if repertoires.list.length}
     <optgroup label="My repertoires">
-      {#each repertoires.list as r}<option value={r.id}>{r.color === 'white' ? '♔' : '♚'} {r.name}</option>{/each}
+      {#each repertoires.list as r}<option value={r.id}>{r.name} ({r.color})</option>{/each}
     </optgroup>
   {/if}
-  <optgroup label="Library — as White">
-    {#each lib.filter((r) => r.color === 'white') as r}<option value={r.id}>♔ {r.name}</option>{/each}
+  <optgroup label="Library: you play White">
+    {#each lib.filter((r) => r.color === 'white') as r}<option value={r.id}>{r.name}</option>{/each}
   </optgroup>
-  <optgroup label="Library — as Black">
-    {#each lib.filter((r) => r.color === 'black') as r}<option value={r.id}>♚ {r.name}</option>{/each}
+  <optgroup label="Library: you play Black">
+    {#each lib.filter((r) => r.color === 'black') as r}<option value={r.id}>{r.name}</option>{/each}
   </optgroup>
 </select>

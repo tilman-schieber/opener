@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from '../components/Icon.svelte';
   import Board from '../components/Board.svelte';
   import MoveList from '../components/MoveList.svelte';
   import ExplorerPanel from '../components/ExplorerPanel.svelte';
@@ -58,21 +59,21 @@
       <div class="grow"><Board fen={board.fen} {orientation} lastMove={board.lastMove?.uci} onmove={play} {shapes} /></div>
     </div>
     <div class="row tools">
-      <button class="btn small" onclick={() => (orientation = orientation === 'white' ? 'black' : 'white')}>⇅ Flip</button>
-      <button class="btn small" class:primary={engineOn} onclick={() => (engineOn = !engineOn)}>⚙ Engine {engineOn ? 'on' : 'off'}</button>
-      <button class="btn small ghost" onclick={() => board.reset()}>↺ Reset</button>
+      <button class="btn small" onclick={() => (orientation = orientation === 'white' ? 'black' : 'white')}><Icon name="flip" /> Flip</button>
+      <button class="btn small" class:primary={engineOn} onclick={() => (engineOn = !engineOn)}>{engineOn ? 'Hide engine' : 'Show engine'}</button>
+      <button class="btn small ghost" onclick={() => board.reset()}><Icon name="reset" /> Reset</button>
       <span class="spacer"></span>
       <AddToRepertoire sans={board.sans} color={orientation} />
-      <a class="btn small primary" href={playHref}>⚔️ Play from here</a>
+      <a class="btn small primary" href={playHref}>Play from here</a>
     </div>
     {#if engineOn}
-      <div class="card panel"><EngineLines fen={board.fen} enabled={engineOn} bind:analysis /></div>
+      <div class="sheet panel"><EngineLines fen={board.fen} enabled={engineOn} bind:analysis /></div>
     {/if}
   </div>
 
   <div class="right">
     <ExplorerPanel fen={board.fen} fens={[INITIAL_FEN, ...board.fens]} onmove={play} onhover={(u) => (hover = u)} myColor={orientation} />
-    <div class="card panel">
+    <div class="sheet panel">
       <MoveList plies={board.plies} cursor={board.cursor} onselect={(i) => board.goto(i)} />
     </div>
     <IdeasPanel fens={board.fens} preferred={openingId} />

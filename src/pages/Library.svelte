@@ -9,11 +9,11 @@
   let side = $state<'all' | 'white' | 'black'>('all');
 
   const GROUPS = [
-    { id: 'white-e4', title: 'As White: 1.e4' },
-    { id: 'white-d4', title: 'As White: 1.d4' },
-    { id: 'white-flank', title: 'As White: flank openings' },
-    { id: 'black-e4', title: 'As Black against 1.e4' },
-    { id: 'black-d4', title: 'As Black against 1.d4 / 1.c4' },
+    { id: 'white-e4', title: 'White, 1.e4' },
+    { id: 'white-d4', title: 'White, 1.d4' },
+    { id: 'white-flank', title: 'White, flank openings' },
+    { id: 'black-e4', title: 'Black against 1.e4' },
+    { id: 'black-d4', title: 'Black against 1.d4 and 1.c4' },
   ] as const;
 
   const filtered = $derived(
@@ -26,28 +26,25 @@
 </script>
 
 <div class="page">
-  <section class="hero">
-    <div>
-      <h1>Learn openings by <em>playing</em> them.</h1>
-      <p class="muted lead">
-        Pick an opening, and a human-like opponent follows your line, then keeps going the way real players at your level do. The explorer and key ideas stay
-        beside the board the whole game.
+  <header class="intro">
+    <div class="page-head">
+      <h1>Opening library</h1>
+      <p class="muted">
+        Choose an opening to study its plans, then play it. Your opponent follows the line you picked, answers the way players at your rating do once the line
+        ends, and hands over to Stockfish when the database runs out.
       </p>
-      <div class="row">
-        <a class="btn primary lg" href={href('play')}>⚔️ Start a game</a>
-        <a class="btn lg" href={href('explore')}>🧭 Open the explorer</a>
-      </div>
     </div>
-  </section>
+    <a class="btn primary lg" href={href('play')}>Play a game</a>
+  </header>
 
   {#if repertoires.list.length}
-    <section>
-      <div class="row head"><h2>Your repertoires</h2><span class="spacer"></span><a href={href('repertoires')}>Manage →</a></div>
+    <section class="stack">
+      <div class="row"><h2>Your repertoires</h2><span class="spacer"></span><a href={href('repertoires')}>Manage</a></div>
       <div class="reps">
         {#each repertoires.list.slice(0, 6) as r}
-          <div class="card rep">
-            <a href={href(`repertoire/${r.id}`)}><strong>{r.name}</strong></a>
-            <span class="muted small">{r.color === 'white' ? '♔ White' : '♚ Black'} · {countLines(r.root)} lines</span>
+          <div class="rep sheet">
+            <a class="rname" href={href(`repertoire/${r.id}`)}>{r.name}</a>
+            <span class="faint small">{r.color === 'white' ? 'White' : 'Black'} · {countLines(r.root)} lines</span>
             <span class="row">
               <a class="btn small" href={href('play', { rep: r.id })}>Play</a>
               <a class="btn small" href={href('drill', { rep: r.id })}>Drill</a>
@@ -58,26 +55,28 @@
     </section>
   {/if}
 
-  <section>
-    <div class="row head">
-      <h2>Opening library</h2>
-      <span class="spacer"></span>
-      <div class="seg">
+  <section class="stack">
+    <div class="row filters">
+      <div class="seg" role="group" aria-label="Side">
         <button class:on={side === 'all'} onclick={() => (side = 'all')}>All</button>
         <button class:on={side === 'white'} onclick={() => (side = 'white')}>White</button>
         <button class:on={side === 'black'} onclick={() => (side = 'black')}>Black</button>
       </div>
-      <input type="search" placeholder="Search openings, lines, ECO…" bind:value={q} />
+      <input id="lib-search" type="search" placeholder="Search by name, line or ECO code" bind:value={q} aria-label="Search openings" />
+      <span class="spacer"></span>
+      <span class="faint small">{filtered.length} openings</span>
     </div>
 
     {#each GROUPS as g}
       {@const items = filtered.filter((o) => o.group === g.id)}
       {#if items.length}
-        <h3 class="group">{g.title}</h3>
-        <div class="grid-cards">
-          {#each items as o (o.id)}
-            <OpeningCard {o} />
-          {/each}
+        <div class="group">
+          <h2>{g.title}</h2>
+          <div class="grid">
+            {#each items as o (o.id)}
+              <OpeningCard {o} />
+            {/each}
+          </div>
         </div>
       {/if}
     {/each}
@@ -86,17 +85,13 @@
 </div>
 
 <style>
-  .page { max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 34px; }
-  .hero { padding: 26px 0 4px; }
-  .hero h1 { font-size: clamp(1.8rem, 4vw, 2.8rem); max-width: 18em; }
-  .hero em { color: var(--accent); font-style: normal; }
-  :global([data-theme='club']) .hero em { font-style: italic; }
-  .lead { font-size: 1.08rem; max-width: 42em; margin-bottom: 18px; }
-  .head { margin-bottom: 12px; }
-  .head h2 { margin: 0; }
-  .group { margin: 22px 0 10px; color: var(--text-muted); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-family: var(--font-body); }
-  :global([data-theme='club']) .group { text-transform: none; letter-spacing: 0; font-family: var(--font-display); font-size: 1.15rem; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 4px; }
-  .reps { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
-  .rep { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; color: var(--text); text-decoration: none !important; }
-  input[type='search'] { min-width: 240px; }
+  .intro { display: flex; align-items: flex-end; gap: 24px; justify-content: space-between; flex-wrap: wrap; padding-bottom: 4px; }
+  .group { display: flex; flex-direction: column; gap: 12px; padding-top: 8px; }
+  .group h2 { font-size: 1.25rem; border-bottom: 1px solid var(--rule); padding-bottom: 6px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+  .reps { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+  .rep { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+  .rname { font-family: var(--font-display); font-size: 1.1rem; color: var(--ink); }
+  .filters input { min-width: min(280px, 100%); }
+  @media (max-width: 480px) { .grid { grid-template-columns: minmax(0, 1fr); } }
 </style>

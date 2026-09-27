@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from './Icon.svelte';
   import { repertoires, saveRepertoire, newRepertoire } from '../lib/repertoire/store.svelte.ts';
   import { addLine } from '../lib/repertoire/model.ts';
 
@@ -25,11 +26,11 @@
 </script>
 
 <div class="add">
-  <button class="btn small" disabled={!sans.length} onclick={() => (open = !open)}>＋ Add line to repertoire</button>
+  <button class="btn small" disabled={!sans.length} onclick={() => (open = !open)}><Icon name="plus" /> Add line to repertoire</button>
   {#if open}
     <div class="menu card">
       {#each repertoires.list as r}
-        <button onclick={() => add(r.id)}>{r.color === 'white' ? '♔' : '♚'} {r.name}</button>
+        <button onclick={() => add(r.id)}>{r.name} <span class="faint">({r.color})</span></button>
       {/each}
       {#if creating}
         <form class="new" onsubmit={(e) => { e.preventDefault(); add(''); }}>
@@ -38,7 +39,7 @@
           <button class="btn small primary" type="submit">Create</button>
         </form>
       {:else}
-        <button onclick={() => { newName = color === 'white' ? 'My White repertoire' : 'My Black repertoire'; creating = true; }}>＋ New {color} repertoire…</button>
+        <button onclick={() => { newName = color === 'white' ? 'My White repertoire' : 'My Black repertoire'; creating = true; }}>New {color} repertoire…</button>
       {/if}
     </div>
   {/if}
@@ -48,8 +49,8 @@
 <style>
   .add { position: relative; display: inline-flex; gap: 8px; align-items: center; }
   .menu { position: absolute; top: 100%; left: 0; margin-top: 4px; z-index: 30; display: flex; flex-direction: column; min-width: 220px; padding: 4px; }
-  .menu button { text-align: left; font: inherit; background: none; border: 0; padding: 7px 10px; border-radius: var(--radius-sm); cursor: pointer; color: var(--text); }
-  .menu button:hover { background: var(--surface-2); }
+  .menu button { text-align: left; font: inherit; background: none; border: 0; padding: 7px 10px; border-radius: var(--radius-sm); cursor: pointer; color: var(--ink); }
+  .menu button:hover { background: var(--sheet-2); }
   .new { display: flex; gap: 6px; padding: 6px; }
   .new input { flex: 1; min-width: 0; }
   .new .btn { padding: 0.3em 0.7em; text-align: center; }

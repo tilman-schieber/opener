@@ -49,7 +49,7 @@ const opening: LibraryOpening = {
     },
     {
       name: 'Cochrane Gambit, 4.Nxf7',
-      moves: '1. e4 e5 2. Nf3 Nf6 3. Nxe5 d6 4. Nxf7 Kxf7 5. Nc3 c5 6. Bc4+ Be6 7. Bxe6+ Kxe6 8. d4 Kf7 9. dxc5 Nc6 10. cxd6 Bxd6',
+      moves: '1. e4 e5 2. Nf3 Nf6 3. Nxe5 d6 4. Nxf7 Kxf7 5. Nc3 c5 6. Bc4+ Be6 7. Bxe6+ Kxe6 8. d4 Kf7 9. dxc5 Nc6',
       note: 'White gives a knight for two pawns and a king hunt. Stay calm: ...c5 and ...Nc6 blunt the centre and your extra piece should tell.',
     },
   ],

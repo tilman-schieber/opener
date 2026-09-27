@@ -26,7 +26,7 @@
     font-size: 0.7rem;
     font-weight: 700;
     line-height: 1;
-    border: 1px solid var(--border);
+    border: 1px solid var(--rule);
   }
   span {
     display: flex;

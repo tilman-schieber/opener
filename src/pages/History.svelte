@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from '../components/Icon.svelte';
   import { db } from '../lib/store/db.ts';
   import { href } from '../lib/router.svelte.ts';
   import type { PlayedGame } from '../lib/play/types.ts';
@@ -34,20 +35,20 @@
   <h1>Game history</h1>
   {#if summary}
     <div class="row stats">
-      <div class="card stat"><strong>{summary.n}</strong><span class="muted small">games</span></div>
-      <div class="card stat"><strong>{Math.round((summary.won / summary.n) * 100)}%</strong><span class="muted small">won</span></div>
-      <div class="card stat"><strong>{Math.round((summary.stayed / summary.n) * 100)}%</strong><span class="muted small">stayed in book</span></div>
+      <div class="sheet stat"><strong>{summary.n}</strong><span class="muted small">games</span></div>
+      <div class="sheet stat"><strong>{Math.round((summary.won / summary.n) * 100)}%</strong><span class="muted small">won</span></div>
+      <div class="sheet stat"><strong>{Math.round((summary.stayed / summary.n) * 100)}%</strong><span class="muted small">stayed in book</span></div>
     </div>
   {/if}
   {#if games === null}
     <p class="muted">Loading…</p>
   {:else if !games.length}
-    <p class="muted">No games yet. <a href={href('play')}>Play your first opening game →</a></p>
+    <p class="muted">No games yet. <a href={href('play')}>Play your first opening game</a></p>
   {:else}
     <div class="list">
       {#each games as g (g.id)}
         {@const r = res(g)}
-        <div class="card game">
+        <div class="sheet game">
           <span class="chip {r.c}">{r.t}</span>
           <div class="info">
             <a href={href(`review/${g.id}`)}><strong>{g.repertoireName}</strong>{g.lineName ? ` · ${g.lineName}` : ''}</a>
@@ -58,8 +59,8 @@
             </div>
             <div class="mono small muted trunc">{formatLine(g.moves.slice(0, 16).map((m) => m.san))}</div>
           </div>
-          <a class="btn small" href={href(`review/${g.id}`)}>🔍 Review</a>
-          <button class="btn small ghost" onclick={() => remove(g.id)} title="Delete">✕</button>
+          <a class="btn small" href={href(`review/${g.id}`)}>Review</a>
+          <button class="btn small ghost" onclick={() => remove(g.id)} title="Delete game" aria-label="Delete game"><Icon name="x" /></button>
         </div>
       {/each}
     </div>
@@ -75,5 +76,5 @@
   .game { display: flex; gap: 12px; align-items: center; padding: 10px 14px; }
   .info { flex: 1; min-width: 0; }
   .trunc { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .warn { color: var(--warn); font-weight: 600; }
+  .warn { color: var(--amber); font-weight: 600; }
 </style>

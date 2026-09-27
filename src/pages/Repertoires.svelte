@@ -51,14 +51,14 @@
   <h1>Your repertoires</h1>
   <p class="muted">Build your own lines by playing moves on the board, copy a library opening, or import a PGN / Lichess study (all variations and comments are kept).</p>
 
-  <div class="card panel create">
+  <div class="sheet panel create">
     <div class="row">
       <input type="text" placeholder="Name (e.g. “Caro-Kann for Black”)" bind:value={name} />
       <div class="seg">
-        <button class:on={color === 'white'} onclick={() => (color = 'white')}>♔ White</button>
-        <button class:on={color === 'black'} onclick={() => (color = 'black')}>♚ Black</button>
+        <button class:on={color === 'white'} onclick={() => (color = 'white')}>White</button>
+        <button class:on={color === 'black'} onclick={() => (color = 'black')}>Black</button>
       </div>
-      <button class="btn primary" onclick={create}>＋ New empty repertoire</button>
+      <button class="btn primary" onclick={create}>New empty repertoire</button>
       <button class="btn" class:primary={importMode === 'pgn'} onclick={() => (importMode = importMode === 'pgn' ? 'none' : 'pgn')}>Import PGN</button>
       <button class="btn" class:primary={importMode === 'study'} onclick={() => (importMode = importMode === 'study' ? 'none' : 'study')}>Import Lichess study</button>
     </div>
@@ -83,20 +83,20 @@
   {:else}
     <div class="list">
       {#each repertoires.list as r (r.id)}
-        <div class="card rep">
+        <div class="sheet rep">
           <div class="info">
             <a href={href(`repertoire/${r.id}`)}><h3>{r.name}</h3></a>
             <div class="row small muted">
-              <span class="chip">{r.color === 'white' ? '♔ White' : '♚ Black'}</span>
+              <span class="chip">{r.color === 'white' ? 'White' : 'Black'}</span>
               <span>{countLines(r.root)} lines</span>
               <span>· {r.origin === 'library' ? `from library${r.libraryId ? ': ' + (getOpening(r.libraryId)?.name ?? '') : ''}` : r.origin === 'import' ? 'imported' : 'custom'}</span>
               <span>· updated {new Date(r.updatedAt).toLocaleDateString()}</span>
             </div>
           </div>
           <div class="row">
-            <a class="btn small" href={href(`repertoire/${r.id}`)}>✎ Edit</a>
-            <a class="btn small" href={href('play', { rep: r.id })}>⚔️ Play</a>
-            <a class="btn small" href={href('drill', { rep: r.id })}>🎯 Drill</a>
+            <a class="btn small" href={href(`repertoire/${r.id}`)}>Edit</a>
+            <a class="btn small" href={href('play', { rep: r.id })}>Play</a>
+            <a class="btn small" href={href('drill', { rep: r.id })}>Drill</a>
             <button class="btn small ghost danger" onclick={() => remove(r.id, r.name)}>Delete</button>
           </div>
         </div>

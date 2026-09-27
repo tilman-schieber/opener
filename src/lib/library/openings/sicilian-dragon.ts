@@ -39,7 +39,7 @@ const opening: LibraryOpening = {
     },
     {
       name: 'Yugoslav, 9.O-O-O d5',
-      moves: '1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 g6 6. Be3 Bg7 7. f3 O-O 8. Qd2 Nc6 9. O-O-O d5 10. exd5 Nxd5 11. Nxc6 bxc6 12. Bd4 Bxd4 13. Qxd4 Qb6 14. Na4 Qc7 15. Bc4 Be6',
+      moves: '1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 g6 6. Be3 Bg7 7. f3 O-O 8. Qd2 Nc6 9. O-O-O d5 10. exd5 Nxd5 11. Nxc6 bxc6 12. Bd4 Bxd4 13. Qxd4 Qb6 14. Na4 Qc7 15. Bc4 Nb6',
       note: 'Without Bc4 White cannot stop the immediate ...d5 break, which frees Black\'s game.',
     },
     {

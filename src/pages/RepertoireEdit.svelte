@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from '../components/Icon.svelte';
   import Board from '../components/Board.svelte';
   import MoveList from '../components/MoveList.svelte';
   import ExplorerPanel from '../components/ExplorerPanel.svelte';
@@ -100,20 +101,20 @@
   <p>{repertoires.loaded ? 'Repertoire not found.' : 'Loading…'} <a href={href('repertoires')}>Back</a></p>
 {:else}
   <div class="head row">
-    <a class="muted small" href={href('repertoires')}>← Repertoires</a>
+    <a class="back small" href={href('repertoires')}>Repertoires</a>
     {#if renaming}
       <input type="text" bind:value={newName} />
       <button class="btn small primary" onclick={async () => { await mutate((r) => (r.name = newName.trim() || r.name)); renaming = false; }}>Save</button>
     {:else}
       <h1 ondblclick={() => { newName = rep.name; renaming = true; }}>{rep.name}</h1>
-      <button class="btn small ghost" onclick={() => { newName = rep.name; renaming = true; }}>✎</button>
+      <button class="btn small ghost" onclick={() => { newName = rep.name; renaming = true; }}>Rename</button>
     {/if}
-    <span class="chip">{rep.color === 'white' ? '♔ White' : '♚ Black'}</span>
+    <span class="chip">{rep.color === 'white' ? 'White' : 'Black'}</span>
     <span class="muted small">{lines.length} lines</span>
     <span class="spacer"></span>
-    <a class="btn small" href={href('play', { rep: rep.id })}>⚔️ Play</a>
-    <a class="btn small" href={href('drill', { rep: rep.id })}>🎯 Drill</a>
-    <button class="btn small" onclick={exportPgn}>⬇ PGN</button>
+    <a class="btn small" href={href('play', { rep: rep.id })}>Play</a>
+    <a class="btn small" href={href('drill', { rep: rep.id })}>Drill</a>
+    <button class="btn small" onclick={exportPgn}><Icon name="download" /> PGN</button>
   </div>
 
   <div class="workspace">
@@ -122,8 +123,8 @@
       <div class="row">
         <label class="check"><input type="checkbox" bind:checked={record} /> Record moves into repertoire</label>
         <span class="spacer"></span>
-        <button class="btn small ghost danger" disabled={!board.cursor || !inRep} onclick={deleteHere}>🗑 Delete from here</button>
-        <button class="btn small ghost" onclick={() => board.reset()}>↺ Start</button>
+        <button class="btn small ghost danger" disabled={!board.cursor || !inRep} onclick={deleteHere}><Icon name="trash" /> Delete from here</button>
+        <button class="btn small ghost" onclick={() => board.reset()}>Back to start</button>
       </div>
       <div class="hint small {inRep ? '' : 'warn'}">
         {#if !inRep}
@@ -140,12 +141,12 @@
     </div>
     <div class="right">
       <ExplorerPanel fen={board.fen} fens={[INITIAL_FEN, ...board.fens]} onmove={play} onhover={(u) => (hover = u)} bookMoves={here.map((n) => n.uci)} myColor={rep.color} />
-      <div class="card panel">
+      <div class="sheet panel">
         <MoveList plies={board.plies} cursor={board.cursor} onselect={(i) => board.goto(i)} />
       </div>
       <IdeasPanel fens={board.fens} preferred={rep.libraryId} comment={node?.comment} note={rep.notes[keyOfFen(board.fen)]} onnote={saveNote} />
-      <div class="card panel">
-        <div class="panel-title"><h3>All lines</h3></div>
+      <div class="sheet panel">
+        <div class="panel-head"><h3>All lines</h3></div>
         <div class="lines">
           {#each lines as l}
             <button class="lrow" onclick={() => openLine(l.ucis)}>
@@ -165,9 +166,9 @@
   .head { max-width: 1320px; margin: 0 auto 14px; gap: 10px; }
   .head h1 { margin: 0; font-size: 1.5rem; cursor: text; }
   .check { font-weight: 500; display: flex; gap: 6px; align-items: center; }
-  .hint { padding: 8px 12px; border-radius: var(--radius-sm); background: var(--accent-soft); }
-  .hint.warn { background: var(--warn-soft); }
+  .hint { padding: 8px 12px; border-radius: var(--radius-sm); background: var(--blue-wash); }
+  .hint.warn { background: var(--amber-wash); }
   .lines { max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; }
-  .lrow { text-align: left; background: none; border: 0; border-bottom: 1px solid var(--border); padding: 6px 4px; font: inherit; color: var(--text); cursor: pointer; display: flex; flex-direction: column; }
-  .lrow:hover { background: var(--surface-2); }
+  .lrow { text-align: left; background: none; border: 0; border-bottom: 1px solid var(--rule); padding: 6px 4px; font: inherit; color: var(--ink); cursor: pointer; display: flex; flex-direction: column; }
+  .lrow:hover { background: var(--sheet-2); }
 </style>

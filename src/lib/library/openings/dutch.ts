@@ -36,7 +36,7 @@ const opening: LibraryOpening = {
     {
       name: 'Leningrad, 7...c6',
       moves:
-        '1. d4 f5 2. g3 Nf6 3. Bg2 g6 4. Nf3 Bg7 5. O-O O-O 6. c4 d6 7. Nc3 c6 8. d5 e5 9. dxe6 Bxe6 10. Qd3 Na6 11. Nd4 Nc5 12. Qc2 Bf7',
+        '1. d4 f5 2. g3 Nf6 3. Bg2 g6 4. Nf3 Bg7 5. O-O O-O 6. c4 d6 7. Nc3 c6 8. d5 e5 9. dxe6 Bxe6 10. Qd3 Na6 11. Ng5 Nc5 12. Nxe6 Nxe6',
       note: 'A flexible system: ...c6 fights for d5 and prepares ...e5 or ...Qa5.',
     },
     {

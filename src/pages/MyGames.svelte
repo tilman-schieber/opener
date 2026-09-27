@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from '../components/Icon.svelte';
   import Board from '../components/Board.svelte';
   import ExplorerPanel from '../components/ExplorerPanel.svelte';
   import MoveList from '../components/MoveList.svelte';
@@ -83,7 +84,7 @@
     <p class="muted">Import your own games and see how <em>you</em> actually play your openings, and how you score, move by move (inspired by openingtree.com). Everything stays in your browser.</p>
   </div>
 
-  <div class="card panel importer">
+  <div class="sheet panel importer">
     <div class="row">
       <div class="seg">
         <button class:on={site === 'lichess'} onclick={() => (site = 'lichess')}>Lichess</button>
@@ -114,7 +115,7 @@
         {#each list as a}
           <span class="chip" class:accent={!mineFilter.accounts.length || mineFilter.accounts.includes(a.account)}>
             <button class="plain" onclick={() => toggleAccount(a.account)}>{label(a.account)} ({a.count})</button>
-            <button class="plain x" title="Remove these games" onclick={async () => { await removeAccount(a.account); await refresh(); }}>✕</button>
+            <button class="plain x" title="Remove these games" onclick={async () => { await removeAccount(a.account); await refresh(); }} aria-label="Remove these games"><Icon name="x" size={12} /></button>
           </span>
         {/each}
       </div>
@@ -130,9 +131,9 @@
           <button class:on={color === 'black'} onclick={() => (color = 'black')}>as Black</button>
         </div>
         <span class="spacer"></span>
-        <button class="btn small ghost" onclick={() => board.reset()}>↺ Start</button>
+        <button class="btn small ghost" onclick={() => board.reset()}>Back to start</button>
       </div>
-      <div class="card panel"><MoveList plies={board.plies} cursor={board.cursor} onselect={(i) => board.goto(i)} /></div>
+      <div class="sheet panel"><MoveList plies={board.plies} cursor={board.cursor} onselect={(i) => board.goto(i)} /></div>
     </div>
     <div class="right">
       {#key version}

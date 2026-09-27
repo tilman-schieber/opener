@@ -43,7 +43,7 @@ const opening: LibraryOpening = {
     },
     {
       name: 'Classical 4...Bc5, 5.Nb3',
-      moves: '1. e4 e5 2. Nf3 Nc6 3. d4 exd4 4. Nxd4 Bc5 5. Nb3 Bb6 6. a4 a6 7. Nc3 Nf6 8. Nd5 Nxd5 9. exd5 Ne7 10. a5 Ba7 11. d6 cxd6 12. Qxd6 Nf5 13. Qd3 O-O',
+      moves: '1. e4 e5 2. Nf3 Nc6 3. d4 exd4 4. Nxd4 Bc5 5. Nb3 Bb6 6. a4 a6 7. Nc3 Nf6 8. Nd5 Nxd5 9. exd5 Ne7 10. a5 Ba7 11. d6 cxd6 12. Qxd6 Nf5 13. Qd3',
       note: 'White gains queenside space with a4–a5 and uses the d5–d6 thrust to open lines.',
     },
     {

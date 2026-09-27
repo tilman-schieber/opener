@@ -83,7 +83,7 @@
     const p = playUci(fen, uci);
     if (!p) return;
     if (p.uci === expected) {
-      if (wrongHere === 0) feedback = { kind: 'good', text: `✓ ${p.san}` };
+      if (wrongHere === 0) feedback = { kind: 'good', text: `${p.san} is correct.` };
       wrongHere = 0;
       advance(p);
       autoplay();
@@ -100,7 +100,7 @@
     if (!mistakes.includes(ply)) mistakes = [...mistakes, ply];
     flash++;
     chime(false);
-    feedback = wrongHere === 1 ? { kind: 'bad', text: `✗ ${p.san} is not the move. Hint: look at the highlighted piece.` } : { kind: 'bad', text: `The move is shown with an arrow.` };
+    feedback = wrongHere === 1 ? { kind: 'bad', text: `${p.san} is not the repertoire move. Hint: the piece to move is circled.` } : { kind: 'bad', text: `Still not it. The arrow shows the move.` };
   }
 
   async function complete() {
@@ -142,7 +142,7 @@
         <span class="chip warn">{counts.learning} learning</span>
         <span class="chip good">{counts.solid} solid</span>
       </div>
-      <button class="btn primary lg" onclick={() => begin()} disabled={!lines.length}>🎯 Start drilling</button>
+      <button class="btn primary lg" onclick={() => begin()} disabled={!lines.length}>Start drilling</button>
       <div class="linelist">
         {#each lines as l}
           {@const s = stats.get(l.key)}
@@ -161,24 +161,25 @@
 {:else}
   <div class="workspace">
     <div class="left">
-      <div class="status {feedback?.kind ?? ''}">
+      <div class="status {feedback?.kind === 'info' ? 'book' : (feedback?.kind ?? '')}">
+        <span class="dot"></span>
         {#if feedback}{feedback.text}{:else if myTurn}Your move — play the repertoire move.{:else}…{/if}
       </div>
       <Board {fen} orientation={color} movable={myTurn ? color : null} lastMove={plies[plies.length - 1]?.uci} {onmove} {shapes} {flash} />
       <div class="row">
         {#if done}
-          <button class="btn primary lg" onclick={() => begin()}>Next line →</button>
-          <button class="btn" onclick={() => line && begin(line)}>↻ Repeat this line</button>
+          <button class="btn primary lg" onclick={() => begin()}>Next line</button>
+          <button class="btn" onclick={() => line && begin(line)}>Repeat this line</button>
         {:else}
-          <button class="btn small" onclick={() => { wrongHere = Math.max(wrongHere, 2); if (!mistakes.includes(ply)) mistakes = [...mistakes, ply]; }} disabled={!myTurn}>💡 Show move</button>
+          <button class="btn small" onclick={() => { wrongHere = Math.max(wrongHere, 2); if (!mistakes.includes(ply)) mistakes = [...mistakes, ply]; }} disabled={!myTurn}>Show the move</button>
         {/if}
         <span class="spacer"></span>
-        <button class="btn small ghost" onclick={() => (active = false)}>✕ End session</button>
+        <button class="btn small ghost" onclick={() => (active = false)}>End session</button>
       </div>
     </div>
     <div class="right">
-      <div class="card panel">
-        <div class="panel-title"><h3>{rep?.name}</h3><span class="small muted">Session: {session.perfect}/{session.lines} perfect</span></div>
+      <div class="sheet panel">
+        <div class="panel-head"><h3>{rep?.name}</h3><span class="small muted">Session: {session.perfect}/{session.lines} perfect</span></div>
         {#if line}
           <p class="lname">{line.name ?? 'Repertoire line'}</p>
           <div class="progress"><div style:width="{(ply / line.ucis.length) * 100}%"></div></div>
@@ -188,25 +189,20 @@
       </div>
       {#if done}
         <IdeasPanel fens={plies.map((p) => p.fen)} preferred={rep?.libraryId} comment={rep && line ? nodeAt(rep.root, line.ucis)?.comment : undefined} />
-        <a class="btn" href={href('play', { rep: repId })}>⚔️ Now play it against the opponent</a>
+        <a class="btn" href={href('play', { rep: repId })}>Play this opening against the opponent</a>
       {:else}
-        <div class="card panel muted small">Key ideas are hidden while you drill — they appear when the line is done.</div>
+        <div class="sheet panel muted small">Key ideas are hidden while you drill — they appear when the line is done.</div>
       {/if}
     </div>
   </div>
 {/if}
 
 <style>
-  .setup { max-width: 820px; margin: 0 auto; padding: 26px 28px; display: flex; flex-direction: column; gap: 14px; }
-  .setup h1 { margin: 0; }
-  .linelist { display: flex; flex-direction: column; border-top: 1px solid var(--border); }
-  .lrow { display: flex; align-items: center; gap: 10px; padding: 8px 4px; border: 0; border-bottom: 1px solid var(--border); background: none; font: inherit; color: var(--text); cursor: pointer; text-align: left; }
-  .lrow:hover { background: var(--surface-2); }
+  .setup { max-width: 820px; margin: 0 auto; padding: 28px; display: flex; flex-direction: column; gap: 16px; }
+  .linelist { display: flex; flex-direction: column; border-top: 1px solid var(--rule); }
+  .lrow { display: flex; align-items: center; gap: 10px; padding: 8px 4px; border: 0; border-bottom: 1px solid var(--rule); background: none; font: inherit; color: var(--ink); cursor: pointer; text-align: left; }
+  .lrow:hover { background: var(--sheet-2); }
   .lname { font-weight: 600; }
-  .status { padding: 10px 12px; border-radius: var(--radius-sm); background: var(--surface-2); font-weight: 600; min-height: 44px; }
-  .status.good { background: var(--good-soft); color: var(--good); }
-  .status.bad { background: var(--bad-soft); color: var(--bad); }
-  .status.info { background: var(--accent-soft); color: var(--accent); }
-  .progress { height: 8px; background: var(--surface-2); border-radius: 99px; overflow: hidden; margin: 6px 0; }
-  .progress div { height: 100%; background: var(--accent); transition: width 0.3s; }
+  .progress { height: 8px; background: var(--sheet-2); border-radius: 99px; overflow: hidden; margin: 6px 0; }
+  .progress div { height: 100%; background: var(--blue); transition: width 0.3s; }
 </style>

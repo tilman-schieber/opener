@@ -47,10 +47,10 @@
   .bg { fill: var(--bar-black); }
   .area { fill: var(--bar-white); }
   .mid { stroke: var(--bar-draw); stroke-dasharray: 4 4; stroke-width: 1; }
-  .line { fill: none; stroke: var(--accent); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
-  .cursor { stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; }
-  .book { stroke: var(--warn); stroke-width: 2; stroke-dasharray: 5 3; vector-effect: non-scaling-stroke; }
-  .inaccuracy { fill: var(--warn); }
+  .line { fill: none; stroke: var(--blue); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+  .cursor { stroke: var(--blue); stroke-width: 2; vector-effect: non-scaling-stroke; }
+  .book { stroke: var(--amber); stroke-width: 2; stroke-dasharray: 5 3; vector-effect: non-scaling-stroke; }
+  .inaccuracy { fill: var(--amber); }
   .mistake { fill: #e07b22; }
-  .blunder { fill: var(--bad); }
+  .blunder { fill: var(--red); }
 </style>

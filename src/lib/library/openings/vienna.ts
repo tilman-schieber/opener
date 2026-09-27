@@ -28,7 +28,7 @@ const opening: LibraryOpening = {
   lines: [
     {
       name: 'Vienna Gambit, 3...d5',
-      moves: '1. e4 e5 2. Nc3 Nf6 3. f4 d5 4. fxe5 Nxe4 5. Nf3 Be7 6. d4 O-O 7. Bd3 f5 8. exf6 Bxf6 9. O-O Nc6 10. Nxe4 dxe4 11. Bxe4 Nxd4 12. Nxd4 Bxd4+ 13. Kh1',
+      moves: '1. e4 e5 2. Nc3 Nf6 3. f4 d5 4. fxe5 Nxe4 5. Nf3 Be7 6. d4 O-O 7. Bd3 f5 8. exf6 Bxf6 9. O-O Nc6 10. Nxe4 dxe4 11. Bxe4 Nxd4 12. c3 Nxf3+ 13. Bxf3',
       note: 'The critical reply: White builds a big centre with d4 and Bd3, and the game opens up quickly.',
     },
     {

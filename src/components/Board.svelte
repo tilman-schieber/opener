@@ -104,7 +104,7 @@
   }
   .shaking {
     animation: shake 0.38s ease;
-    outline: 3px solid var(--bad);
+    outline: 3px solid var(--red);
   }
   @keyframes shake {
     0%, 100% { transform: translateX(0); }

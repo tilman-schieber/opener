@@ -44,7 +44,7 @@ const opening: LibraryOpening = {
     },
     {
       name: 'King\'s Gambit Declined, 2...Bc5',
-      moves: '1. e4 e5 2. f4 Bc5 3. Nf3 d6 4. Nc3 Nf6 5. Bc4 Nc6 6. d3 Bg4 7. h3 Bxf3 8. Qxf3 exf4 9. Bxf4 Nd4 10. Qg3',
+      moves: '1. e4 e5 2. f4 Bc5 3. Nf3 d6 4. Nc3 Nf6 5. Bc4 Nc6 6. d3 Bg4 7. h3 Bxf3 8. Qxf3 exf4 9. Bxf4 Nd4 10. Qd1',
       note: 'Develop calmly and get the bishop pair; the f-file and the long diagonal toward f7 give White pressure.',
     },
     {

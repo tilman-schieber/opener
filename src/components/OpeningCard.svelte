@@ -2,37 +2,51 @@
   import type { LibraryOpening } from '../lib/library/types.ts';
   import { href } from '../lib/router.svelte.ts';
   import MiniBoard from './MiniBoard.svelte';
-  import { playLine } from '../lib/chess/moves.ts';
+  import { playLine, formatLine } from '../lib/chess/moves.ts';
 
   let { o }: { o: LibraryOpening } = $props();
   const plies = $derived(playLine(o.base));
-  const fen = $derived(plies[plies.length - 1]?.fen);
+  const last = $derived(plies[plies.length - 1]);
+  const LEVEL = ['', 'Beginner', 'Club', 'Advanced'];
 </script>
 
-<a class="card ocard" href={href(`opening/${o.id}`)}>
-  <div class="thumb"><MiniBoard {fen} orientation={o.side} lastMove={plies[plies.length - 1]?.uci} /></div>
+<article class="ocard">
+  <div class="thumb"><MiniBoard fen={last?.fen} orientation={o.side} lastMove={last?.uci} /></div>
   <div class="body">
-    <div class="row top">
-      <span class="chip side-{o.side}">{o.side === 'white' ? '♔ White' : '♚ Black'}</span>
-      <span class="muted small">{o.eco}</span>
-      <span class="spacer"></span>
-      <span class="diff" title="Difficulty">{'●'.repeat(o.difficulty)}<span class="off">{'●'.repeat(3 - o.difficulty)}</span></span>
-    </div>
-    <h3>{o.name}</h3>
-    <p class="muted small sum">{o.summary}</p>
-    <div class="muted small">{o.lines.length} lines · {o.traps.length} traps</div>
+    <h3><a href={href(`opening/${o.id}`)}>{o.name}</a></h3>
+    <p class="line mono">{formatLine(plies.map((p) => p.san))}</p>
+    <p class="meta">
+      <span class="side"><span class="sw {o.side}"></span>{o.side === 'white' ? 'White' : 'Black'}</span>
+      <span class="eco mono">{o.eco}</span>
+      <span>{LEVEL[o.difficulty]}</span>
+      <span>{o.lines.length} lines</span>
+    </p>
   </div>
-</a>
+</article>
 
 <style>
-  .ocard { display: flex; flex-direction: column; overflow: hidden; color: var(--text); text-decoration: none !important; transition: transform 0.12s, box-shadow 0.12s; }
-  .ocard:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
-  .thumb { padding: 12px 12px 0; }
-  .body { padding: 10px 14px 14px; display: flex; flex-direction: column; gap: 4px; }
-  h3 { margin: 2px 0 0; font-size: 1.1rem; }
-  .sum { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 0; }
-  .diff { color: var(--accent); font-size: 0.6rem; letter-spacing: 2px; }
-  .diff .off { color: var(--surface-3); }
-  .side-white { background: var(--bar-white); color: #333; }
-  .side-black { background: var(--bar-black); color: #eee; border-color: transparent; }
+  .ocard {
+    position: relative;
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 14px;
+    padding: 12px;
+    background: var(--sheet);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    transition: border-color 0.12s;
+  }
+  .ocard:hover { border-color: var(--ink-3); }
+  .ocard:focus-within { box-shadow: var(--focus); }
+  .body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  h3 { font-family: var(--font-display); font-weight: 500; font-size: 1.2rem; }
+  h3 a { color: var(--ink); text-decoration: none !important; }
+  h3 a::after { content: ''; position: absolute; inset: 0; }
+  h3 a:focus-visible { box-shadow: none; }
+  .line { font-size: 0.8rem; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .meta { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 0.78rem; color: var(--ink-3); margin-top: auto; }
+  .side { display: inline-flex; align-items: center; gap: 5px; color: var(--ink-2); font-weight: 500; }
+  .sw { width: 10px; height: 10px; border-radius: 2px; border: 1px solid var(--ink-2); }
+  .sw.white { background: #fff; }
+  .sw.black { background: #1a2130; }
 </style>

@@ -23,7 +23,7 @@
     display: flex;
     flex-direction: column-reverse;
     flex-shrink: 0;
-    border: 1px solid var(--border);
+    border: 1px solid var(--rule);
   }
   .evalbar.flip { flex-direction: column; }
   .fill { background: var(--bar-white); transition: height 0.4s ease; }

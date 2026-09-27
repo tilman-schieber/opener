@@ -114,22 +114,22 @@
       {#if game.review}
         <EvalGraph review={game.review} {cursor} onselect={(i) => (cursor = i)} leftBookPly={game.leftBookPly} />
       {:else if progress}
-        <div class="card panel">
+        <div class="sheet panel">
           <div class="small muted">Analysing with Stockfish… {progress[0]}/{progress[1]}</div>
           <div class="progress"><div style:width="{(progress[0] / progress[1]) * 100}%"></div></div>
         </div>
       {/if}
       <div class="row">
-        <button class="btn small" class:primary={engineOn} onclick={() => (engineOn = !engineOn)}>⚙ Live engine {engineOn ? 'on' : 'off'}</button>
-        <a class="btn small" href={href('explore', { moves: game.moves.slice(0, cursor).map((m) => m.uci).join(','), color: game.color })}>🧭 Open in explorer</a>
-        <a class="btn small primary" href={href('play', { rep: game.repertoireId })}>⚔️ Play again</a>
+        <button class="btn small" class:primary={engineOn} onclick={() => (engineOn = !engineOn)}>{engineOn ? 'Hide engine' : 'Show engine'}</button>
+        <a class="btn small" href={href('explore', { moves: game.moves.slice(0, cursor).map((m) => m.uci).join(','), color: game.color })}>Open in explorer</a>
+        <a class="btn small primary" href={href('play', { rep: game.repertoireId })}>Play again</a>
       </div>
-      {#if engineOn}<div class="card panel"><EngineLines {fen} enabled={engineOn} bind:analysis /></div>{/if}
+      {#if engineOn}<div class="sheet panel"><EngineLines {fen} enabled={engineOn} bind:analysis /></div>{/if}
     </div>
 
     <div class="right">
-      <div class="card panel summary">
-        <div class="panel-title">
+      <div class="sheet panel summary">
+        <div class="panel-head">
           <h3>Review</h3>
           <span class="chip">{game.result}</span>
         </div>
@@ -142,7 +142,7 @@
         {#if game.leftBookPly !== undefined}
           <div class="lb">
             <p>
-              📖 You left your repertoire at <button class="linklike" onclick={() => (cursor = game!.leftBookPly!)}>move {Math.floor(game.leftBookPly / 2) + 1}</button>:
+              You left your repertoire at <button class="linklike" onclick={() => (cursor = game!.leftBookPly!)}>move {Math.floor(game.leftBookPly / 2) + 1}</button>:
               played <span class="san">{game.moves[game.leftBookPly].san}</span>, repertoire has <span class="san">{game.expected?.join(' / ')}</span>.
             </p>
             {#if rep && rep.origin !== 'library'}
@@ -153,13 +153,13 @@
         {/if}
       </div>
 
-      <div class="card panel">
+      <div class="sheet panel">
         <MoveList plies={game.moves} {cursor} onselect={(i) => (cursor = i)} {marks} {glyphs} />
       </div>
 
       {#if moments.length}
-        <div class="card panel">
-          <div class="panel-title"><h3>Key moments</h3></div>
+        <div class="sheet panel">
+          <div class="panel-head"><h3>Key moments</h3></div>
           {#each moments as m}
             <button class="moment" class:mine={m.mine} onclick={() => (cursor = m.i)}>
               <span class="chip {m.judgement === 'blunder' ? 'bad' : 'warn'}">{m.judgement}</span>
@@ -172,7 +172,7 @@
       {/if}
 
       {#if nextReview?.judgement && game.moves[cursor]}
-        <div class="card panel hint">
+        <div class="note amber">
           <strong>{game.moves[cursor].san}</strong> was {nextReview.judgement === 'inaccuracy' ? 'an' : 'a'} {nextReview.judgement} (−{Math.round(nextReview.loss)}% winning chances).
           Best was <span class="san">{nextReview.bestSan}</span> (green arrow).
         </div>
@@ -189,15 +189,14 @@
 <style>
   .board-row { display: flex; gap: 8px; }
   .grow { flex: 1; min-width: 0; }
-  .progress { height: 8px; background: var(--surface-2); border-radius: 99px; overflow: hidden; margin-top: 6px; }
-  .progress div { height: 100%; background: var(--accent); transition: width 0.2s; }
+  .progress { height: 8px; background: var(--sheet-2); border-radius: 99px; overflow: hidden; margin-top: 6px; }
+  .progress div { height: 100%; background: var(--blue); transition: width 0.2s; }
   .summary p { margin: 0 0 8px; }
   .stat { display: flex; flex-direction: column; padding: 6px 14px 6px 0; margin-right: 10px; }
   .stat strong { font-size: 1.4rem; font-family: var(--font-display); }
-  .lb { border-top: 1px solid var(--border); padding-top: 10px; margin-top: 6px; }
-  .linklike { background: none; border: 0; padding: 0; font: inherit; color: var(--accent); cursor: pointer; font-weight: 700; }
-  .moment { display: flex; align-items: center; gap: 8px; width: 100%; background: none; border: 0; border-bottom: 1px solid var(--border); padding: 6px 2px; font: inherit; color: var(--text-muted); cursor: pointer; text-align: left; }
-  .moment.mine { color: var(--text); }
-  .moment:hover { background: var(--surface-2); }
-  .hint { border-left: 4px solid var(--warn); }
+  .lb { border-top: 1px solid var(--rule); padding-top: 10px; margin-top: 6px; }
+  .linklike { background: none; border: 0; padding: 0; font: inherit; color: var(--blue); cursor: pointer; font-weight: 700; }
+  .moment { display: flex; align-items: center; gap: 8px; width: 100%; background: none; border: 0; border-bottom: 1px solid var(--rule); padding: 6px 2px; font: inherit; color: var(--ink-2); cursor: pointer; text-align: left; }
+  .moment.mine { color: var(--ink); }
+  .moment:hover { background: var(--sheet-2); }
 </style>

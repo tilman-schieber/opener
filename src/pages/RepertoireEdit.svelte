@@ -9,7 +9,6 @@
   import { addLine, removeAt, nodeAt, linesOf, positionIndex, type Repertoire, type RepNode } from '../lib/repertoire/model.ts';
   import { INITIAL_FEN, keyOfFen, formatLine, playUci, type Ply } from '../lib/chess/moves.ts';
   import { href } from '../lib/router.svelte.ts';
-  import { moveSound } from '../lib/sound.ts';
   import type { DrawShape } from 'chessground/draw';
   import type { Key } from 'chessground/types';
 
@@ -38,7 +37,6 @@
   async function play(uci: string) {
     const p = board.play(uci);
     if (!p) return;
-    moveSound(p.san.includes('x'));
     if (record && rep) await mutate((r) => addLine(r.root, board.sans));
   }
 

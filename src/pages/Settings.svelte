@@ -29,7 +29,6 @@
         </button>
       {/each}
     </div>
-    <label class="check"><input type="checkbox" bind:checked={settings.sound} /> Move sounds</label>
   </section>
 
   <section>
@@ -64,7 +63,6 @@
   .lbl { min-width: 190px; font-weight: 500; font-size: 0.9rem; }
   .boardpick { display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--ink-2); background: none; border: 2px solid transparent; border-radius: 6px; padding: 3px; cursor: pointer; font: inherit; }
   .boardpick.on { border-color: var(--blue); color: var(--ink); }
-  .check { font-weight: 400; display: flex; gap: 8px; align-items: center; }
   input[type='range'] { width: 200px; }
   input[type='number'] { width: 80px; }
 </style>

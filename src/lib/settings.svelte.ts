@@ -14,7 +14,6 @@ export interface Settings {
   showExplorerInPlay: boolean;
   showEvalInPlay: boolean;
   boardTheme: 'theme' | 'brown' | 'blue' | 'green' | 'gray';
-  sound: boolean;
 }
 
 const DEFAULTS: Settings = {
@@ -28,7 +27,6 @@ const DEFAULTS: Settings = {
   showExplorerInPlay: true,
   showEvalInPlay: false,
   boardTheme: 'theme',
-  sound: true,
 };
 
 const KEY = 'opener:settings';

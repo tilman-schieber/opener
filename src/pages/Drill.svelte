@@ -8,7 +8,6 @@
   import { linesOf, nodeAt, type RepLine } from '../lib/repertoire/model.ts';
   import { statsFor, recordRun, pickLine, lineStatus, type LineStat } from '../lib/drill/stats.ts';
   import { INITIAL_FEN, playUci, formatLine, type Ply } from '../lib/chess/moves.ts';
-  import { moveSound, chime } from '../lib/sound.ts';
   import type { DrawShape } from 'chessground/draw';
   import type { Key } from 'chessground/types';
 
@@ -74,7 +73,6 @@
   function advance(p: Ply) {
     plies = [...plies, p];
     fen = p.fen;
-    moveSound(p.san.includes('x'));
   }
 
   function onmove(uci: string) {
@@ -99,7 +97,6 @@
     wrongHere++;
     if (!mistakes.includes(ply)) mistakes = [...mistakes, ply];
     flash++;
-    chime(false);
     feedback = wrongHere === 1 ? { kind: 'bad', text: `${p.san} is not the repertoire move. Hint: the piece to move is circled.` } : { kind: 'bad', text: `Still not it. The arrow shows the move.` };
   }
 
@@ -110,7 +107,6 @@
     stats.set(line.key, s);
     stats = new Map(stats);
     session = { lines: session.lines + 1, perfect: session.perfect + (mistakes.length ? 0 : 1) };
-    chime(!mistakes.length);
     feedback = mistakes.length
       ? { kind: 'bad', text: `Line done with ${mistakes.length} mistake${mistakes.length > 1 ? 's' : ''}. It will come back soon.` }
       : { kind: 'good', text: 'Perfect! Line completed without mistakes.' };

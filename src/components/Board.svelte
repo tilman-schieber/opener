@@ -92,7 +92,7 @@
   onMount(() => {
     cg = Chessground(el, {
       ...config(),
-      coordinates: true,
+      coordinates: false,
       animation: { enabled: true, duration: 180 },
       premovable: { enabled: false },
       highlight: { lastMove: true, check: true },
@@ -122,6 +122,10 @@
 
 <svelte:window onkeydown={(e) => promo && e.key === 'Escape' && cancelPromotion()} />
 
+<div class="frame">
+<div class="ranks" aria-hidden="true">
+  {#each orientation === 'white' ? ['8', '7', '6', '5', '4', '3', '2', '1'] : ['1', '2', '3', '4', '5', '6', '7', '8'] as r}<span>{r}</span>{/each}
+</div>
 <div class="board board-{settings.boardTheme}" class:shaking>
   <div class="cg-wrap" bind:this={el}></div>
   {#if promo && promoPlacement}
@@ -144,8 +148,33 @@
     </div>
   {/if}
 </div>
+<span></span>
+<div class="files" aria-hidden="true">
+  {#each orientation === 'white' ? ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] : ['h', 'g', 'f', 'e', 'd', 'c', 'b', 'a'] as f}<span>{f}</span>{/each}
+</div>
+</div>
 
 <style>
+  .frame {
+    display: grid;
+    grid-template-columns: 16px minmax(0, 1fr);
+    grid-template-rows: auto 18px;
+    column-gap: 4px;
+    width: 100%;
+  }
+  .ranks { display: grid; grid-template-rows: repeat(8, 1fr); }
+  .files { display: grid; grid-template-columns: repeat(8, 1fr); }
+  .ranks span, .files span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--ink-2);
+    user-select: none;
+  }
+  .files span { align-items: flex-end; }
   .board {
     width: 100%;
     aspect-ratio: 1;

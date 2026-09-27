@@ -20,7 +20,6 @@
   import { explore } from '../lib/explorer/index.ts';
   import { total, type ExplorerMove } from '../lib/explorer/types.ts';
   import { db, uid } from '../lib/store/db.ts';
-  import { moveSound, chime } from '../lib/sound.ts';
   import type { PlayedGame, PlayedMove } from '../lib/play/types.ts';
   import type { DrawShape } from 'chessground/draw';
   import type { Key } from 'chessground/types';
@@ -111,7 +110,6 @@
   function push(m: PlayedMove) {
     moves = [...moves, m];
     cursor = moves.length;
-    moveSound(m.san.includes('x'));
     checkEnd();
   }
 
@@ -130,7 +128,6 @@
     if (!leftBook && expected.length && !expected.some((n) => n.uci === p.uci)) {
       const exp = expected.map((n) => uciToSan(fen, n.uci));
       leftBook = { ply, expected: exp, stats: [] };
-      chime(false);
       explore(config.source === 'lichess' ? { source: 'lichess', fen, ratings: settings.ratings, speeds: settings.speeds } : { source: 'offline', fen })
         .then((d) => {
           if (leftBook?.ply === ply) leftBook.stats = d.moves.filter((m) => m.uci === p.uci || expected.some((n) => n.uci === m.uci));
@@ -162,7 +159,6 @@
         endOfLineShown = true;
         status = 'Your prepared line ends here. From now on, it’s your own play.';
         statusKind = 'info';
-        chime(true);
       }
     } catch (e) {
       status = `Opponent error: ${(e as Error).message}`;
@@ -199,7 +195,6 @@
     phase = 'over';
     thinking = false;
     const won = o.winner === color;
-    chime(won || !o.winner);
     if (!rep || !moves.length) return;
     const g: PlayedGame = {
       id: uid(),

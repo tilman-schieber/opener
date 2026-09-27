@@ -10,7 +10,6 @@
   import { BoardState } from '../lib/boardstate.svelte.ts';
   import { route, href } from '../lib/router.svelte.ts';
   import { playUci, INITIAL_FEN, type Ply } from '../lib/chess/moves.ts';
-  import { moveSound } from '../lib/sound.ts';
   import { getOpening } from '../lib/library/index.ts';
   import type { Analysis } from '../lib/engine/engine.ts';
   import type { DrawShape } from 'chessground/draw';
@@ -37,8 +36,7 @@
   let hover = $state<string | null>(null);
 
   function play(uci: string) {
-    const p = board.play(uci);
-    if (p) moveSound(p.san.includes('x'));
+    board.play(uci);
   }
 
   const shapes = $derived.by(() => {

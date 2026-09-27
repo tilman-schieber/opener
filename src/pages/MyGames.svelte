@@ -9,7 +9,6 @@
   import type { ExplorerSource } from '../lib/explorer/types.ts';
   import { auth } from '../lib/auth/lichess.svelte.ts';
   import { INITIAL_FEN } from '../lib/chess/moves.ts';
-  import { moveSound } from '../lib/sound.ts';
   import type { DrawShape } from 'chessground/draw';
   import type { Key } from 'chessground/types';
 
@@ -70,8 +69,7 @@
   }
 
   function play(uci: string) {
-    const p = board.play(uci);
-    if (p) moveSound(p.san.includes('x'));
+    board.play(uci);
   }
 
   const shapes = $derived<DrawShape[]>(hover ? [{ orig: hover.slice(0, 2) as Key, dest: hover.slice(2, 4) as Key, brush: 'paleBlue' }] : []);

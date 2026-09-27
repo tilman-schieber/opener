@@ -73,13 +73,14 @@ engine automatically.
 
 ## Design
 
-The three themes (Studio, Club and Arcade) are design directions to choose from. See
-[docs/design-briefs.md](docs/design-briefs.md) and switch between them in ⚙ Settings.
+"Scoresheet": ruled paper, ink and ballpoint blue, with Newsreader for opening names, IBM Plex for the UI and
+notation, and no emoji. Every move mentioned in ideas and notes can be hovered to preview the position. See
+[docs/design-briefs.md](docs/design-briefs.md).
 
 ## Code map
 
 ```
-src/lib/chess/        move helpers (chessops), transposition-safe position keys
+src/lib/chess/        move helpers (chessops), transposition-safe position keys, notation-in-prose parser
 src/lib/explorer/     lichess + offline + my-games sources, cache, opening names
 src/lib/auth/         Lichess OAuth PKCE
 src/lib/engine/       Stockfish UCI wrapper, win% model

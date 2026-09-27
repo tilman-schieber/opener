@@ -58,7 +58,7 @@ export type Segment = TextSegment | MoveSegment | SquareSegment;
 
 const SAN = String.raw`(?:O-O-O|O-O|[KQRBN][a-h]?[1-8]?x?[a-h][1-8]|[a-h]x[a-h][1-8](?:=[QRBN])?|[a-h][1-8](?:=[QRBN])?)[+#]?(?:[!?]{1,2})?`;
 const TOKEN = new RegExp(
-  String.raw`(?<![\w/.…-])(?<num>\d{1,3}\s?(?:\.\.\.|…|\.)\s?)?(?<ell>\.\.\.|…)?(?<san>${SAN})(?<route>(?:[–—-][a-h][1-8])+)?(?![\w-])`,
+  String.raw`(?<![\w.…-])(?<num>\d{1,3}\s?(?:\.\.\.|…|\.)\s?)?(?<ell>\.\.\.|…)?(?<san>${SAN})(?<route>(?:[–—-][a-h][1-8])+)?(?![\w-])`,
   'g',
 );
 

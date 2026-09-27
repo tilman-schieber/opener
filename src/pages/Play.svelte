@@ -8,12 +8,13 @@
   import EngineLines from '../components/EngineLines.svelte';
   import RepPicker from '../components/RepPicker.svelte';
   import WDLBar from '../components/WDLBar.svelte';
+  import MoveSeq from '../components/MoveSeq.svelte';
   import { route, go, href } from '../lib/router.svelte.ts';
   import { settings } from '../lib/settings.svelte.ts';
   import { auth } from '../lib/auth/lichess.svelte.ts';
   import { findRepertoire, repertoires } from '../lib/repertoire/store.svelte.ts';
   import { addLine, emptyRoot, linesOf, positionIndex, nodeAt, type Repertoire, type RepLine, type RepNode } from '../lib/repertoire/model.ts';
-  import { INITIAL_FEN, keyOfFen, outcomeOf, playUci, turnOf, uciToSan, formatLine, type Outcome } from '../lib/chess/moves.ts';
+  import { INITIAL_FEN, keyOfFen, outcomeOf, playUci, playSans, turnOf, uciToSan, formatLine, type Outcome } from '../lib/chess/moves.ts';
   import { chooseMove, type OpponentConfig } from '../lib/play/opponent.ts';
   import { getPlayEngine, type Analysis } from '../lib/engine/engine.ts';
   import { explore } from '../lib/explorer/index.ts';
@@ -275,7 +276,10 @@
             <option value={String(i)}>{l.name ? `${l.name} — ` : ''}{formatLine(l.sans.slice(0, 10))}{l.sans.length > 10 ? ' …' : ''}</option>
           {/each}
         </select>
-        <p class="muted small">You play <strong>{rep.color}</strong>.</p>
+        {#if lineChoice !== 'random' && lines[Number(lineChoice)]}
+          <div class="linepreview"><MoveSeq plies={playSans(lines[Number(lineChoice)].sans)} orientation={rep.color} /></div>
+        {/if}
+        <p class="muted small">You play <strong>{rep.color}</strong>. Hover a move to see the position.</p>
       </div>
     {/if}
 
@@ -392,7 +396,7 @@
   .setup { max-width: 720px; margin: 0 auto; padding: 28px; display: flex; flex-direction: column; gap: 18px; }
   .field { display: flex; flex-direction: column; gap: 6px; }
   .field select { width: 100%; }
-  .field p { margin: 0; }
+  .linepreview { padding: 8px 10px; background: var(--sheet-2); border-radius: var(--radius-sm); }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   @media (max-width: 640px) { .two { grid-template-columns: 1fr; } }
   input[type='range'] { width: 100%; accent-color: var(--blue); }

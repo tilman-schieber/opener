@@ -1,9 +1,6 @@
 import type { ExplorerSource, Speed } from './explorer/types.ts';
 
-export type ThemeName = 'studio' | 'club' | 'arcade';
-
 export interface Settings {
-  theme: ThemeName;
   dark: 'auto' | 'light' | 'dark';
   explorerSource: ExplorerSource;
   ratings: number[];
@@ -21,7 +18,6 @@ export interface Settings {
 }
 
 const DEFAULTS: Settings = {
-  theme: 'studio',
   dark: 'auto',
   explorerSource: 'offline',
   ratings: [1600, 1800, 2000],

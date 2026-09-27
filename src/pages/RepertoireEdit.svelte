@@ -154,7 +154,7 @@
               <span class="mono small">{formatLine(l.sans)}</span>
             </button>
           {:else}
-            <p class="muted small">No lines yet — play some moves on the board.</p>
+            <p class="muted small">No lines yet. Play some moves on the board to add one.</p>
           {/each}
         </div>
       </div>

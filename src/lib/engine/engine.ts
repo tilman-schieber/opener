@@ -39,6 +39,8 @@ export class Engine {
   private queue: Promise<unknown> = Promise.resolve();
   private running = false;
   private ready: Promise<void>;
+  /** Id of the newest analyse() request; older queued ones are skipped */
+  private latest = 0;
 
   constructor() {
     const file = threaded ? 'stockfish-19-lite.js' : 'stockfish-19-lite-single.js';
@@ -92,8 +94,11 @@ export class Engine {
 
   /** Cancels whatever is running and starts this search next. */
   analyse(fen: string, opts: GoOptions = {}): Promise<Analysis> {
+    const id = ++this.latest;
     this.stop();
-    return this.go(fen, opts);
+    const job = this.queue.then(() => (id === this.latest ? this.run(fen, opts) : { fen, depth: 0, lines: [] }));
+    this.queue = job.catch(() => {});
+    return job;
   }
 
   private async run(fen: string, opts: GoOptions): Promise<Analysis> {

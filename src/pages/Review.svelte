@@ -163,7 +163,7 @@
           {#each moments as m}
             <button class="moment" class:mine={m.mine} onclick={() => (cursor = m.i)}>
               <span class="chip {m.judgement === 'blunder' ? 'bad' : 'warn'}">{m.judgement}</span>
-              <span>{m.mine ? 'You' : 'Opponent'}: <span class="san">{formatLine([m.san], m.i)}</span>{m.bestSan ? ` — better was ` : ''}{#if m.bestSan}<span class="san">{m.bestSan}</span>{/if}</span>
+              <span>{m.mine ? 'You' : 'Opponent'}: <span class="san">{formatLine([m.san], m.i)}</span>{m.bestSan ? `, better was ` : ''}{#if m.bestSan}<span class="san">{m.bestSan}</span>{/if}</span>
               <span class="spacer"></span>
               <span class="mono small muted">{formatScore(m)}</span>
             </button>

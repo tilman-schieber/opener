@@ -92,7 +92,7 @@
     // another move the repertoire also contains at this point (a sibling branch) is not a mistake
     const node = nodeAt(rep!.root, line.ucis.slice(0, ply));
     if (node?.children.some((c) => c.uci === p.uci)) {
-      feedback = { kind: 'info', text: `${p.san} is also in your repertoire — but this line continues differently. Try again.` };
+      feedback = { kind: 'info', text: `${p.san} is also in your repertoire, but this line continues differently. Try again.` };
       flash++;
       return;
     }
@@ -133,7 +133,7 @@
 {#if !active}
   <div class="setup card">
     <h1>Drill your lines</h1>
-    <p class="muted">Play your side of each line from memory. Lines you miss come back more often; solid lines fade into the background. No rigid schedule — just focus on what’s weak.</p>
+    <p class="muted">Play your side of each line from memory. Lines you miss come back more often; solid lines fade into the background. There is no fixed schedule.</p>
     <RepPicker bind:value={repId} />
     {#if rep}
       <div class="row">
@@ -163,7 +163,7 @@
     <div class="left">
       <div class="status {feedback?.kind === 'info' ? 'book' : (feedback?.kind ?? '')}">
         <span class="dot"></span>
-        {#if feedback}{feedback.text}{:else if myTurn}Your move — play the repertoire move.{:else}…{/if}
+        {#if feedback}{feedback.text}{:else if myTurn}Your move. Play the repertoire move.{:else}…{/if}
       </div>
       <Board {fen} orientation={color} movable={myTurn ? color : null} lastMove={plies[plies.length - 1]?.uci} {onmove} {shapes} {flash} />
       <div class="row">
@@ -191,7 +191,7 @@
         <IdeasPanel fens={plies.map((p) => p.fen)} preferred={rep?.libraryId} comment={rep && line ? nodeAt(rep.root, line.ucis)?.comment : undefined} />
         <a class="btn" href={href('play', { rep: repId })}>Play this opening against the opponent</a>
       {:else}
-        <div class="sheet panel muted small">Key ideas are hidden while you drill — they appear when the line is done.</div>
+        <div class="sheet panel muted small">Key ideas stay hidden while you drill and appear when the line is done.</div>
       {/if}
     </div>
   </div>

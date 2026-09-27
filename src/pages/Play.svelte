@@ -155,7 +155,7 @@
       // Out of prepared moves for the player?
       if (!outcome.over && !endOfLineShown && !leftBook && !(book.get(keyOfFen(p.fen))?.length) && moves.length >= 2) {
         endOfLineShown = true;
-        status = 'End of your prepared line — you’re on your own now!';
+        status = 'Your prepared line ends here. From now on, it’s your own play.';
         statusKind = 'info';
         chime(true);
       }
@@ -273,7 +273,7 @@
         <select id="line" bind:value={lineChoice}>
           <option value="random">Random line ({lines.length} in this repertoire)</option>
           {#each lines as l, i}
-            <option value={String(i)}>{l.name ? `${l.name} — ` : ''}{formatLine(l.sans.slice(0, 10))}{l.sans.length > 10 ? ' …' : ''}</option>
+            <option value={String(i)}>{l.name ? `${l.name}: ` : ''}{formatLine(l.sans.slice(0, 10))}{l.sans.length > 10 ? ' …' : ''}</option>
           {/each}
         </select>
         {#if lineChoice !== 'random' && lines[Number(lineChoice)]}
@@ -331,7 +331,7 @@
           <div>
             <strong>You left your repertoire</strong> at move {Math.floor(leftBook.ply / 2) + 1}. Expected
             {#each leftBook.expected as e, i}<span class="san">{e}</span>{i < leftBook.expected.length - 1 ? ' or ' : ''}{/each}.
-            The game goes on — the opponent adapts.
+            The game continues from here.
           </div>
           {#if leftBook.stats.length}
             <div class="lb-stats">

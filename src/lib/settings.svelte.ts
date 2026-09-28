@@ -20,6 +20,8 @@ export interface Settings {
   opponentStyle: 'realistic' | 'surprise' | 'hardest';
   /** Show what players usually play here after you leave your prepared moves */
   coach: boolean;
+  /** Library layout */
+  libraryView: 'tree' | 'cards';
 }
 
 const DEFAULTS: Settings = {
@@ -36,6 +38,7 @@ const DEFAULTS: Settings = {
   offlineBand: null,
   opponentStyle: 'realistic',
   coach: true,
+  libraryView: 'tree',
 };
 
 const KEY = 'opener:settings';

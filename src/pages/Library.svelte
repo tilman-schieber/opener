@@ -4,6 +4,12 @@
   import { repertoires } from '../lib/repertoire/store.svelte.ts';
   import { href } from '../lib/router.svelte.ts';
   import { countLines } from '../lib/repertoire/model.ts';
+  import { settings } from '../lib/settings.svelte.ts';
+  import { buildOpeningTree, filterTree, pathTo, type TreeNode } from '../lib/library/tree.ts';
+  import { loadNames } from '../lib/explorer/names.ts';
+  import TreeBranch from '../components/TreeBranch.svelte';
+  import OpeningPreview from '../components/OpeningPreview.svelte';
+  import type { LibraryOpening } from '../lib/library/types.ts';
 
   let q = $state('');
   let side = $state<'all' | 'white' | 'black'>('all');
@@ -15,6 +21,41 @@
     { id: 'black-e4', title: 'Black against 1.e4' },
     { id: 'black-d4', title: 'Black against 1.d4 and 1.c4' },
   ] as const;
+
+  // ---------------------------------------------------------------- tree view
+  const fullTree = buildOpeningTree(OPENINGS);
+  let namesReady = $state(false);
+  loadNames().then(() => (namesReady = true));
+
+  const matches = (o: LibraryOpening) =>
+    (side === 'all' || o.side === side) &&
+    (!q || (o.name + ' ' + o.eco + ' ' + o.summary + ' ' + o.lines.map((l) => l.name).join(' ')).toLowerCase().includes(q.toLowerCase()));
+  const tree = $derived(filterTree(fullTree, matches));
+
+  // First move and the replies to it start open
+  // First moves, the replies to them, and the branch of the initially selected opening start open
+  const initialOpen = new Set<string>([...fullTree.children.map((c) => c.id), ...fullTree.children.flatMap((c) => c.children.map((g) => g.id))]);
+  for (const n of pathTo(fullTree, 'italian-game')) initialOpen.add(n.id);
+  let expanded = $state(initialOpen);
+  function toggle(id: string) {
+    const next = new Set(expanded);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    expanded = next;
+  }
+
+  type Sel = { kind: 'node'; node: TreeNode } | { kind: 'opening'; opening: LibraryOpening; node: TreeNode };
+  const first = OPENINGS.find((o) => o.id === 'italian-game') ?? OPENINGS[0];
+  let sel = $state<Sel>({ kind: 'opening', opening: first, node: pathTo(fullTree, first.id).at(-1)! });
+  const selectedId = $derived(sel.kind === 'opening' ? `opening:${sel.opening.id}` : `node:${sel.node.id}`);
+
+  /** Select an opening and open the branches leading to it */
+  function pick(o: LibraryOpening, n: TreeNode) {
+    sel = { kind: 'opening', opening: o, node: n };
+    const next = new Set(expanded);
+    for (const p of pathTo(fullTree, o.id)) next.add(p.id);
+    expanded = next;
+  }
 
   const filtered = $derived(
     OPENINGS.filter(
@@ -57,6 +98,10 @@
 
   <section class="stack">
     <div class="row filters">
+      <div class="seg" role="group" aria-label="View">
+        <button class:on={settings.libraryView === 'tree'} onclick={() => (settings.libraryView = 'tree')}>Move tree</button>
+        <button class:on={settings.libraryView === 'cards'} onclick={() => (settings.libraryView = 'cards')}>Cards</button>
+      </div>
       <div class="seg" role="group" aria-label="Side">
         <button class:on={side === 'all'} onclick={() => (side = 'all')}>All</button>
         <button class:on={side === 'white'} onclick={() => (side = 'white')}>White</button>
@@ -67,6 +112,21 @@
       <span class="faint small">{filtered.length} openings</span>
     </div>
 
+    {#if settings.libraryView === 'tree'}
+      <div class="treeview">
+        <div class="sheet treebox">
+          {#if tree}
+            <ul class="roots">
+              {#each tree.children as c (c.id)}
+                <TreeBranch node={c} depth={0} {expanded} openAll={!!q} selected={selectedId} {namesReady} ontoggle={toggle} onselect={(x) => (sel = x)} />
+              {/each}
+            </ul>
+          {/if}
+          <p class="faint small legend"><span class="sw white"></span> you play White <span class="sw black"></span> you play Black · hover a move to see the position</p>
+        </div>
+        <OpeningPreview {sel} {namesReady} onpick={pick} />
+      </div>
+    {:else}
     {#each GROUPS as g}
       {@const items = filtered.filter((o) => o.group === g.id)}
       {#if items.length}
@@ -80,6 +140,7 @@
         </div>
       {/if}
     {/each}
+    {/if}
     {#if !filtered.length}<p class="muted">No opening matches “{q}”.</p>{/if}
   </section>
 </div>
@@ -93,5 +154,13 @@
   .rep { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
   .rname { font-family: var(--font-display); font-size: 1.1rem; color: var(--ink); }
   .filters input { min-width: min(280px, 100%); }
+  .treeview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 400px); gap: 20px; align-items: start; }
+  .treebox { padding: 8px 6px; }
+  .roots { list-style: none; margin: 0; padding: 0; }
+  .legend { display: flex; align-items: center; gap: 6px; padding: 10px 10px 4px; border-top: 1px solid var(--rule); margin-top: 8px; }
+  .sw { width: 10px; height: 10px; border-radius: 2px; border: 1px solid var(--ink-2); display: inline-block; }
+  .sw.white { background: #fff; }
+  .sw.black { background: #111827; border-color: var(--ink-3); margin-left: 8px; }
+  @media (max-width: 900px) { .treeview { grid-template-columns: minmax(0, 1fr); } }
   @media (max-width: 480px) { .grid { grid-template-columns: minmax(0, 1fr); } }
 </style>

@@ -48,5 +48,5 @@
   .side { display: inline-flex; align-items: center; gap: 5px; color: var(--ink-2); font-weight: 500; }
   .sw { width: 10px; height: 10px; border-radius: 2px; border: 1px solid var(--ink-2); }
   .sw.white { background: #fff; }
-  .sw.black { background: #1a2130; }
+  .sw.black { background: #111827; border-color: var(--ink-3); }
 </style>

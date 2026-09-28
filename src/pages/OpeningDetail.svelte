@@ -4,6 +4,9 @@
   import { href, go } from '../lib/router.svelte.ts';
   import { playLine, tokenizeMoves } from '../lib/chess/moves.ts';
   import MiniBoard from '../components/MiniBoard.svelte';
+  import { buildOpeningTree, pathTo, segmentLabel, type TreeNode } from '../lib/library/tree.ts';
+  import { OPENINGS } from '../lib/library/index.ts';
+  import { showPreview, hidePreview } from '../lib/preview.svelte.ts';
   import MoveSeq from '../components/MoveSeq.svelte';
   import Rich from '../components/Rich.svelte';
   import { newRepertoire, saveRepertoire, repertoires } from '../lib/repertoire/store.svelte.ts';
@@ -22,6 +25,24 @@
   const theirs = $derived(o ? openingContext(o, { side: o.side === 'white' ? 'black' : 'white' }) : undefined);
   const LEVEL = ['', 'Beginner-friendly', 'Club level', 'Theory-heavy'];
 
+  // Place in the move tree: the branch leading here, the parent opening, and what branches off
+  const tree = buildOpeningTree(OPENINGS);
+  const crumbs = $derived(pathTo(tree, id));
+  const parent = $derived.by(() => {
+    for (let i = crumbs.length - 2; i >= 0; i--) {
+      const it = crumbs[i].items.find((x) => x.id !== id);
+      if (it) return it;
+    }
+    return undefined;
+  });
+  const branches = $derived.by(() => {
+    const here = crumbs[crumbs.length - 1];
+    const out: { o: NonNullable<typeof parent>; n: TreeNode }[] = [];
+    const walk = (n: TreeNode) => n.children.forEach((c) => (c.items.forEach((x) => out.push({ o: x, n: c })), walk(c)));
+    if (here) walk(here);
+    return out;
+  });
+
   function exploreHref(moves: string, at?: number) {
     return href('explore', { moves: playLine(moves).map((p) => p.uci).join(','), opening: id, at: at?.toString() });
   }
@@ -39,7 +60,20 @@
   <p>Unknown opening. <a href={href('')}>Back to the library</a></p>
 {:else}
   <div class="detail">
-    <a class="back small" href={href('')}>Library</a>
+    <nav class="crumbs small" aria-label="Place in the move tree">
+      <a class="back" href={href('')}>Library</a>
+      {#each crumbs as c}
+        <span class="sep">›</span>
+        <span
+          class="crumb mono"
+          role="button"
+          tabindex="0"
+          onmouseenter={(e) => showPreview(e.currentTarget, { fen: c.fen, orientation: o?.side ?? 'white', arrows: [[c.path[c.path.length - 1].uci.slice(0, 2), c.path[c.path.length - 1].uci.slice(2, 4)]] })}
+          onmouseleave={hidePreview}>{segmentLabel(c)}</span
+        >
+      {/each}
+      {#if parent}<span class="faint">· part of the <a href={href(`opening/${parent.id}`)}>{parent.name}</a></span>{/if}
+    </nav>
     <header>
       <div class="title">
         <p class="meta"><span class="chip eco">{o.eco}</span><span>You play {o.side === 'white' ? 'White' : 'Black'}</span><span>{LEVEL[o.difficulty]}</span></p>
@@ -98,6 +132,21 @@
           </section>
         {/if}
 
+        {#if branches.length}
+          <section>
+            <h2>Gambits and sidelines from here</h2>
+            <ul class="branches">
+              {#each branches as b}
+                <li>
+                  <a href={href(`opening/${b.o.id}`)}>{b.o.name}</a>
+                  <span class="mono small faint">{segmentLabel(b.n)}</span>
+                  <span class="small muted">you play {b.o.side}</span>
+                </li>
+              {/each}
+            </ul>
+          </section>
+        {/if}
+
         {#if o.modelGames.length}
           <section>
             <h2>Model games</h2>
@@ -136,8 +185,13 @@
 
 <style>
   .detail { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+  .crumbs { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; color: var(--ink-2); }
   .back { color: var(--ink-2); }
-  .back::before { content: '‹ '; }
+  .sep { color: var(--ink-3); }
+  .crumb { cursor: help; border-bottom: 1px dotted var(--ink-3); }
+  .branches { list-style: none; padding: 0 !important; }
+  .branches li { display: flex; gap: 10px; align-items: baseline; }
+  .branches a { font-family: var(--font-display); font-size: 1.05rem; }
   header { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; padding-bottom: 20px; border-bottom: 1px solid var(--rule); }
   .title { display: flex; flex-direction: column; gap: 6px; }
   .meta { display: flex; gap: 12px; align-items: center; font-size: 0.85rem; color: var(--ink-2); }

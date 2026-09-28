@@ -101,6 +101,7 @@
     cursor = prefix.length;
     leftBook = prior?.leftBookPly !== undefined && prior.leftBookPly < prefix.length ? { ply: prior.leftBookPly, expected: prior.expected ?? [], stats: [] } : null;
     coach = null;
+    switchedTo = null;
     endOfLineShown = false;
     outcome = { over: false };
     savedId = null;
@@ -152,7 +153,29 @@
   function push(m: PlayedMove) {
     moves = [...moves, m];
     cursor = moves.length;
+    retarget();
     checkEnd();
+  }
+
+  /** Line name to announce with the opponent's next status message */
+  let switchedTo: string | null = null;
+
+  /**
+   * When the game leaves the current target line but still follows another prepared line, that line
+   * becomes the target, so the opponent keeps playing it.
+   */
+  function retarget() {
+    if (!target || leftBook) return;
+    const ucis = moves.map((m) => m.uci);
+    const matches = (l: RepLine) => ucis.length <= l.ucis.length && ucis.every((u, i) => l.ucis[i] === u);
+    if (matches(target) || (ucis.length > target.ucis.length && target.ucis.every((u, i) => ucis[i] === u))) return;
+    const candidates = lines.filter(matches);
+    if (!candidates.length) return;
+    const next = candidates[Math.floor(Math.random() * candidates.length)];
+    const sameName = next.name && next.name === target.name;
+    target = next;
+    config.target = next.ucis;
+    if (!sameName) switchedTo = next.name ?? 'another prepared line';
   }
 
   function checkEnd() {
@@ -216,7 +239,8 @@
       if (token !== gameToken || phase !== 'playing') return;
       const p = playUci(fen, m.uci);
       if (!p) throw new Error('engine returned an illegal move');
-      status = m.reason;
+      status = switchedTo ? `Switched to “${switchedTo}”. ${m.reason}` : m.reason;
+      switchedTo = null;
       statusKind = m.phase;
       push({ ...p, phase: m.phase, games: m.games });
       // Out of prepared moves for the player?

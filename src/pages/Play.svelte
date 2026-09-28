@@ -439,7 +439,6 @@
               {/each}
             </div>
           {/if}
-          <button class="btn small" onclick={takeBack}><Icon name="undo" /> Take back</button>
         </div>
       {/if}
 

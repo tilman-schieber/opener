@@ -22,11 +22,12 @@
   const o = $derived(getOpening(id));
   let lineIdx = $state(Number(route.query.get('line') ?? 0));
   const line = $derived(o ? o.lines[Math.min(lineIdx, o.lines.length - 1)] : undefined);
-  const plies = $derived<Ply[]>(line ? playLine(line.moves) : []);
+  const allPlies = $derived<Ply[][]>(o ? o.lines.map((l) => playLine(l.moves)) : []);
+  const plies = $derived<Ply[]>(allPlies[Math.min(lineIdx, allPlies.length - 1)] ?? []);
   const baseLen = $derived(o ? playLine(o.base).length : 0);
 
   /** Number of moves shown on the board */
-  let step = $state(0);
+  let step = $state(Number(route.query.get('step') ?? 0));
   let quiz = $state(false);
   let wrong = $state(0);
   let flash = $state(0);
@@ -80,6 +81,42 @@
     return `${capture ? 'The pawn captures on ' + to : 'Pawn to ' + to}.` + check;
   }
 
+  /** Number of plies two lines share from the start */
+  function common(a: Ply[], b: Ply[]) {
+    let i = 0;
+    while (i < a.length && i < b.length && a[i].uci === b[i].uci) i++;
+    return i;
+  }
+
+  /** Where other lines leave this one: the moves they play from the current position */
+  const branches = $derived.by(() => {
+    const out = new Map<string, { san: string; uci: string; lines: { idx: number; name: string }[] }>();
+    allPlies.forEach((pl, j) => {
+      if (j === lineIdx || pl.length <= step || common(pl, plies) < step) return;
+      const m = pl[step];
+      if (m.uci === next?.uci) return;
+      const b = out.get(m.uci) ?? { san: m.san, uci: m.uci, lines: [] };
+      b.lines.push({ idx: j, name: o!.lines[j].name });
+      out.set(m.uci, b);
+    });
+    return [...out.values()];
+  });
+
+  /** Switch to another line, keeping the moves both lines share on the board */
+  function switchLine(j: number) {
+    const keep = Math.min(step, common(allPlies[j], plies));
+    lineIdx = j;
+    go(keep);
+  }
+
+  /** Where each line leaves the main line, e.g. "5.d4" */
+  function divergence(j: number): string {
+    const pl = allPlies[j];
+    if (j === 0 || !pl) return '';
+    const i = common(pl, allPlies[0]);
+    return pl[i] ? `${moveLabel(i)} ${pl[i].san}` : '';
+  }
+
   function go(n: number) {
     step = Math.max(0, Math.min(plies.length, n));
     wrong = 0;
@@ -99,6 +136,13 @@
       feedback = { kind: 'good', text: `${p.san} is right.` };
       step++;
       wrong = 0;
+    } else if (branches.some((b) => b.uci === p.uci)) {
+      // Another prepared line: follow it
+      const b = branches.find((x) => x.uci === p.uci)!;
+      lineIdx = b.lines[0].idx;
+      step++;
+      wrong = 0;
+      feedback = { kind: 'good', text: `${p.san} is also prepared: switching to “${b.lines[0].name}”.` };
     } else {
       wrong++;
       flash++;
@@ -117,7 +161,10 @@
       if (wrong >= 2) return [{ orig: next.uci.slice(0, 2) as Key, dest: next.uci.slice(2, 4) as Key, brush: 'green' }];
       return [];
     }
-    return [{ orig: next.uci.slice(0, 2) as Key, dest: next.uci.slice(2, 4) as Key, brush: 'paleBlue' }];
+    return [
+      ...branches.map((b) => ({ orig: b.uci.slice(0, 2) as Key, dest: b.uci.slice(2, 4) as Key, brush: 'paleGrey' })),
+      { orig: next.uci.slice(0, 2) as Key, dest: next.uci.slice(2, 4) as Key, brush: 'paleBlue' },
+    ];
   });
 
   function onkey(e: KeyboardEvent) {
@@ -144,10 +191,7 @@
     <header class="row">
       <a class="back small" href={href(`opening/${o.id}`)}>{o.name}</a>
       <span class="spacer"></span>
-      <label class="small muted" for="learn-line">Line</label>
-      <select id="learn-line" bind:value={lineIdx} onchange={() => go(0)}>
-        {#each o.lines as l, i}<option value={i}>{l.name}</option>{/each}
-      </select>
+      <span class="faint small">{o.lines.length} lines · step {step} of {plies.length}</span>
     </header>
 
     <div class="workspace">
@@ -175,6 +219,20 @@
       </div>
 
       <div class="right">
+        <section class="sheet panel lines">
+          <div class="panel-head"><h3>Lines</h3><span class="faint small">shared moves stay on the board when you switch</span></div>
+          <ul>
+            {#each o.lines as l, j}
+              <li>
+                <button class:on={j === lineIdx} onclick={() => switchLine(j)} aria-current={j === lineIdx ? 'true' : undefined}>
+                  <span class="lname">{l.name}</span>
+                  {#if j === 0}<span class="chip">main line</span>{:else}<span class="mono small faint">{divergence(j)}</span>{/if}
+                </button>
+              </li>
+            {/each}
+          </ul>
+        </section>
+
         <section class="sheet panel move">
           {#if last}
             <div class="row">
@@ -203,6 +261,19 @@
             <div class="label">Start</div>
             <p><Rich text={o.summary} {ctx} orientation={side} /></p>
             <p class="muted small">Step through the line with Next (or the arrow keys). Turn on “Quiz me” to play your own moves from memory.</p>
+          {/if}
+                  {#if branches.length && !done}
+            <div class="note blue branches">
+              <div class="label">Other lines branch here</div>
+              <p class="small">This line continues with <span class="san">{next ? moveLabel(step) + ' ' + next.san : ''}</span>. Prepared alternatives:</p>
+              <div class="row">
+                {#each branches as b}
+                  {#each b.lines as l}
+                    <button class="btn small" onclick={() => switchLine(l.idx)}><span class="san">{moveLabel(step)} {b.san}</span> {l.name}</button>
+                  {/each}
+                {/each}
+              </div>
+            </div>
           {/if}
         </section>
 
@@ -236,7 +307,6 @@
   header { max-width: 1280px; width: 100%; margin: 0 auto; }
   .back { color: var(--ink-2); font-family: var(--font-display); font-size: 1.15rem; }
   .back::before { content: '‹ '; }
-  select { min-width: 220px; }
   .controls { gap: 8px; }
   .check { font-weight: 400; display: flex; gap: 8px; align-items: center; }
   .progress { height: 4px; background: var(--rule); border-radius: 2px; overflow: hidden; }
@@ -246,4 +316,12 @@
   .big .num { color: var(--ink-3); font-size: 1.1rem; }
   .move p { line-height: 1.65; }
   .end { display: flex; flex-direction: column; gap: 10px; }
+  .lines ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .lines li { margin: 0; }
+  .lines button { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; background: none; border: 0; border-top: 1px solid var(--rule); padding: 7px 4px; font: inherit; color: var(--ink); cursor: pointer; text-align: left; }
+  .lines li:first-child button { border-top: 0; }
+  .lines button:hover { background: var(--sheet-2); }
+  .lines button.on { color: var(--blue); }
+  .lines button.on .lname { font-weight: 600; }
+  .branches { display: flex; flex-direction: column; gap: 6px; }
 </style>

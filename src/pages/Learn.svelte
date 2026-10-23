@@ -9,11 +9,10 @@
   import { ideasFor } from '../lib/library/ideas.ts';
   import { route, href } from '../lib/router.svelte.ts';
   import { playLine, playUci, INITIAL_FEN, turnOf, type Ply } from '../lib/chess/moves.ts';
-  import { explore } from '../lib/explorer/index.ts';
+  import { humanQuery } from '../lib/play/opponent.ts';
   import { total, type ExplorerData } from '../lib/explorer/types.ts';
   import { settings } from '../lib/settings.svelte.ts';
   import { auth } from '../lib/auth/lichess.svelte.ts';
-  import { ratingBands } from '../lib/settings.svelte.ts';
   import type { DrawShape } from 'chessground/draw';
   import type { Key } from 'chessground/types';
 
@@ -49,11 +48,7 @@
     db = null;
     if (!f) return;
     let live = true;
-    explore(
-      auth.token
-        ? { source: 'lichess', fen: f, ratings: ratingBands(settings.humanRating), speeds: ['blitz', 'rapid', 'classical'] }
-        : { source: 'offline', fen: f, rating: settings.humanRating },
-    )
+    humanQuery({ source: auth.token ? 'lichess' : 'offline', humanRating: settings.humanRating }, f)
       .then((d) => live && (db = d))
       .catch(() => {});
     return () => (live = false);

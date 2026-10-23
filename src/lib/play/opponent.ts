@@ -32,6 +32,50 @@ export interface OpponentMove {
 }
 
 /**
+ * Where the game stands with respect to the database. The database is asked again on every ply
+ * until it has had no data for `MAX_DB_MISSES` plies in a row; a network error does not count as a
+ * miss, so a transient failure or a rate limit only costs one engine move.
+ */
+export interface GameStage {
+  /** Consecutive plies for which the database had too few games */
+  misses: number;
+}
+
+export const MAX_DB_MISSES = 3;
+
+export function newStage(): GameStage {
+  return { misses: 0 };
+}
+
+export function outOfDb(stage: GameStage): boolean {
+  return stage.misses >= MAX_DB_MISSES;
+}
+
+/** Side effects of chooseMove, replaceable in tests. */
+export interface OpponentDeps {
+  query: (cfg: OpponentConfig, fen: string) => Promise<ExplorerData>;
+  engineMove: (cfg: OpponentConfig, fen: string) => Promise<string>;
+}
+
+/** The database query the opponent and the coaching card share: human games around the chosen rating. */
+export function humanQuery(cfg: Pick<OpponentConfig, 'source' | 'humanRating'>, fen: string): Promise<ExplorerData> {
+  return explore(
+    cfg.source === 'lichess'
+      ? { source: 'lichess', fen, ratings: ratingBands(cfg.humanRating), speeds: ['blitz', 'rapid', 'classical'] }
+      : { source: 'offline', fen, rating: cfg.humanRating },
+  );
+}
+
+const defaultDeps: OpponentDeps = {
+  query: humanQuery,
+  engineMove: async (cfg, fen) => {
+    const a = await getPlayEngine().go(fen, { movetime: 600 + Math.random() * 600, strength: { elo: cfg.engineElo } });
+    if (!a.bestmove) throw new Error('engine returned no move');
+    return a.bestmove;
+  },
+};
+
+/**
  * Picks a database move.
  * - realistic: proportional to how often it is played, ignoring moves under 3% so blunders stay rare
  * - surprise: flattened weights (square root) over moves with at least 1%, so sidelines come up often
@@ -61,12 +105,7 @@ export function pickWeighted(data: ExplorerData, rand = Math.random, style: Oppo
  * move in this position, (3) a human-like move weighted by explorer statistics at the chosen
  * rating, (4) Stockfish at the configured strength.
  */
-export async function chooseMove(
-  cfg: OpponentConfig,
-  fen: string,
-  playedUcis: string[],
-  stage: { outOfDb: boolean },
-): Promise<OpponentMove> {
+export async function chooseMove(cfg: OpponentConfig, fen: string, playedUcis: string[], stage: GameStage, deps: OpponentDeps = defaultDeps): Promise<OpponentMove> {
   const ply = playedUcis.length;
   const onTarget = playedUcis.every((u, i) => cfg.target[i] === u);
   if (onTarget && ply < cfg.target.length) {
@@ -78,30 +117,26 @@ export async function chooseMove(
     const c = bookMoves[Math.floor(Math.random() * bookMoves.length)];
     return { uci: c.uci, san: uciToSan(fen, c.uci), phase: 'book', reason: 'Repertoire move' };
   }
-  if (!stage.outOfDb) {
+  if (!outOfDb(stage)) {
     try {
-      const data = await explore(
-        cfg.source === 'lichess'
-          ? { source: 'lichess', fen, ratings: ratingBands(cfg.humanRating), speeds: ['blitz', 'rapid', 'classical'] }
-          : { source: 'offline', fen, rating: cfg.humanRating },
-      );
+      const data = await deps.query(cfg, fen);
       const games = total(data);
       if (games >= cfg.humanMinGames) {
         const style = cfg.style ?? 'realistic';
         const uci = pickWeighted(data, Math.random, style, fen.split(' ')[1] === 'w');
-        if (uci) {
-          const m = data.moves.find((x) => x.uci === uci)!;
+        const m = uci ? data.moves.find((x) => x.uci === uci) : undefined;
+        if (m) {
+          stage.misses = 0;
           const share = Math.round((total(m) / games) * 100);
           const label = style === 'hardest' ? 'Best-scoring reply' : style === 'surprise' ? 'Surprise choice' : 'Human choice';
-          return { uci, san: m.san, phase: 'human', games, reason: `${label}: played in ${share}% of ${games.toLocaleString()} games` };
+          return { uci: m.uci, san: m.san, phase: 'human', games, reason: `${label}: played in ${share}% of ${games.toLocaleString()} games` };
         }
       }
+      stage.misses++;
     } catch {
-      /* network trouble: fall through to the engine */
+      /* network trouble: the engine plays this move and the database is asked again next time */
     }
-    stage.outOfDb = true;
   }
-  const a = await getPlayEngine().go(fen, { movetime: 600 + Math.random() * 600, strength: { elo: cfg.engineElo } });
-  const uci = a.bestmove!;
+  const uci = await deps.engineMove(cfg, fen);
   return { uci, san: uciToSan(fen, uci), phase: 'engine', reason: `Stockfish (~${cfg.engineElo})` };
 }

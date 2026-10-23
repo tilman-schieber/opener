@@ -14,7 +14,7 @@ Opener is a client-side web app for learning chess openings by **playing them**,
   From a review you can retry the game from any move.
 - **Explore:** a clickable opening explorer showing games, score and win/draw/loss bars. Sources are the bundled offline
   tree, the live Lichess and Masters databases (after "Log in with Lichess"), and your own games.
-- **Key ideas:** curated plans, opponent plans, pawn structures, traps and position notes for 26 openings. They are
+- **Key ideas:** curated plans, opponent plans, pawn structures, traps and position notes for 40 openings. They are
   matched by position, so they also appear after transpositions.
 - **Drill:** play your side of a line from memory. Lines you miss come back more often. There is no strict
   spaced-repetition schedule.
@@ -50,12 +50,14 @@ npm test           # library validation (every move sequence legal, lines start 
 ### Building the offline tree
 
 ```sh
-npm run build-tree -- --bands 1200-1600,1600-2200 --games 5000000 --plies 12 --deep 18 --min 40 --month 2026-08
+npm run build-tree -- --bands 1200-1600,1600-2200 --games 5000000 --plies 12 --deep 30 --min 40 --month 2026-08
 ```
 
 This streams the dump (`curl | zstd -dc`, so nothing is stored on disk) and keeps rated blitz, rapid and classical
 games, sorted into rating bands by average rating. Along the curated library lines it counts up to `--deep`
-half-moves, so the human-like opponent lasts longer in the openings you study. It counts every (position, move) pair in the first `--plies`
+half-moves, so the human-like opponent lasts longer in the openings you study. Library lines run to about 25
+half-moves, so keep `--deep` above that: with the earlier default of 18 no line's end position had data and the
+engine took over as soon as a line ended. It counts every (position, move) pair in the first `--plies`
 half-moves across worker threads and writes 256 JSON shards keyed by a position hash, loaded lazily by the app. Five
 million games take about 45 minutes, limited by download speed.
 

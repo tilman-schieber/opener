@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { playLine, playUci, normalizeUci, keyOfFen, INITIAL_FEN, outcomeOf, tokenizeMoves, formatLine } from './chess/moves.ts';
 import { addLine, emptyRoot, linesOf, positionIndex, removeAt, countLines } from './repertoire/model.ts';
 import { repertoireFromPgn } from './repertoire/importPgn.ts';
-import { pickWeighted } from './play/opponent.ts';
+import { pickWeighted, chooseMove, newStage, outOfDb, MAX_DB_MISSES, type OpponentConfig, type OpponentDeps } from './play/opponent.ts';
 import { weakness, pickLine, lineStatus } from './drill/stats.ts';
 import { treeHash, fenKey } from './chess/key.ts';
 import { judge } from './review/analyse.ts';
@@ -106,6 +106,52 @@ describe('opponent', () => {
     }
     expect(counts['g2g4']).toBeGreaterThan(0);
     expect(counts['d2d4'] / counts['e2e4']).toBeGreaterThan(0.45);
+  });
+});
+
+describe('opponent fallback', () => {
+  const start = INITIAL_FEN;
+  const empty = { source: 'offline' as const, white: 0, draws: 0, black: 0, moves: [] };
+  const full = { source: 'offline' as const, white: 100, draws: 0, black: 0, moves: [{ uci: 'e2e4', san: 'e4', white: 100, draws: 0, black: 0 }] };
+  const cfg: OpponentConfig = { book: new Map(), target: [], humanRating: 1600, humanMinGames: 25, engineElo: 1600, source: 'offline' };
+  const deps = (query: OpponentDeps['query']): OpponentDeps & { engineCalls: number } => {
+    const d = { engineCalls: 0, query, engineMove: async () => (d.engineCalls++, 'g1f3') };
+    return d;
+  };
+
+  it('asks the database again after a miss and gives up only after several in a row', async () => {
+    let calls = 0;
+    const d = deps(async () => (calls++, empty));
+    const stage = newStage();
+    for (let i = 0; i < MAX_DB_MISSES; i++) expect((await chooseMove(cfg, start, [], stage, d)).phase).toBe('engine');
+    expect(calls).toBe(MAX_DB_MISSES);
+    expect(outOfDb(stage)).toBe(true);
+    await chooseMove(cfg, start, [], stage, d);
+    expect(calls).toBe(MAX_DB_MISSES);
+    expect(d.engineCalls).toBe(MAX_DB_MISSES + 1);
+  });
+
+  it('does not count a network error as a miss', async () => {
+    const d = deps(async () => {
+      throw new Error('429');
+    });
+    const stage = newStage();
+    for (let i = 0; i < 5; i++) expect((await chooseMove(cfg, start, [], stage, d)).phase).toBe('engine');
+    expect(stage.misses).toBe(0);
+    expect(outOfDb(stage)).toBe(false);
+  });
+
+  it('resets the miss count when the database answers again', async () => {
+    const answers = [empty, empty, full];
+    const d = deps(async () => answers.shift() ?? full);
+    const stage = newStage();
+    await chooseMove(cfg, start, [], stage, d);
+    await chooseMove(cfg, start, [], stage, d);
+    expect(stage.misses).toBe(2);
+    const m = await chooseMove(cfg, start, [], stage, d);
+    expect(m.phase).toBe('human');
+    expect(m.uci).toBe('e2e4');
+    expect(stage.misses).toBe(0);
   });
 });
 

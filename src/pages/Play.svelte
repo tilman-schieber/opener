@@ -10,15 +10,14 @@
   import WDLBar from '../components/WDLBar.svelte';
   import MoveSeq from '../components/MoveSeq.svelte';
   import { route, go, href } from '../lib/router.svelte.ts';
-  import { settings, ratingBands } from '../lib/settings.svelte.ts';
+  import { settings } from '../lib/settings.svelte.ts';
   import { auth } from '../lib/auth/lichess.svelte.ts';
   import { findRepertoire, repertoires } from '../lib/repertoire/store.svelte.ts';
   import { addLine, emptyRoot, linesOf, positionIndex, nodeAt, type Repertoire, type RepLine, type RepNode } from '../lib/repertoire/model.ts';
   import { INITIAL_FEN, keyOfFen, outcomeOf, playUci, playSans, turnOf, uciToSan, formatLine, type Outcome } from '../lib/chess/moves.ts';
-  import { chooseMove, type OpponentConfig } from '../lib/play/opponent.ts';
+  import { chooseMove, humanQuery, newStage, type OpponentConfig } from '../lib/play/opponent.ts';
   import { getPlayEngine, type Analysis } from '../lib/engine/engine.ts';
-  import { explore } from '../lib/explorer/index.ts';
-  import { total, type ExplorerMove } from '../lib/explorer/types.ts';
+    import { total, type ExplorerMove } from '../lib/explorer/types.ts';
   import { db, uid } from '../lib/store/db.ts';
   import type { PlayedGame, PlayedMove } from '../lib/play/types.ts';
   import type { DrawShape } from 'chessground/draw';
@@ -73,7 +72,7 @@
   let analysis = $state<Analysis | null>(null);
   let gameToken = 0;
   let config: OpponentConfig;
-  const stage = { outOfDb: false };
+  const stage = newStage();
 
   const liveFen = $derived(moves.length ? moves[moves.length - 1].fen : INITIAL_FEN);
   const viewFen = $derived(cursor === 0 ? INITIAL_FEN : moves[cursor - 1].fen);
@@ -105,7 +104,7 @@
     endOfLineShown = false;
     outcome = { over: false };
     savedId = null;
-    stage.outOfDb = false;
+    stage.misses = 0;
     gameToken++;
     config = {
       book,
@@ -214,11 +213,7 @@
   }
 
   function dbQuery(fen: string) {
-    return explore(
-      config.source === 'lichess'
-        ? { source: 'lichess', fen, ratings: ratingBands(config.humanRating), speeds: ['blitz', 'rapid', 'classical'] }
-        : { source: 'offline', fen, rating: config.humanRating },
-    );
+    return humanQuery(config, fen);
   }
 
   /** Score of a database move for the side that played it, in percent */
@@ -270,7 +265,7 @@
     if (leftBook && leftBook.ply >= moves.length) leftBook = null;
     if (coach && coach.ply >= moves.length) coach = null;
     if (endOfLineShown) endOfLineShown = false;
-    stage.outOfDb = false;
+    stage.misses = 0;
     thinking = false;
     if (turnOf(liveFen) !== color) opponentMove();
   }
@@ -378,7 +373,7 @@
         <label for="hr">Human-like opponent: <strong>{settings.humanRating}</strong></label>
         <input id="hr" type="range" min="1000" max="2400" step="100" bind:value={settings.humanRating} />
         <p class="muted small">
-          {#if auth.token}Uses the Lichess database around this rating.{:else}Uses the bundled 1600–2200 tree. Log in with Lichess to match any rating.{/if}
+          {#if auth.token}Uses the Lichess database around this rating.{:else}Uses the bundled Lichess tree for the rating band closest to this. Log in with Lichess to match any rating exactly.{/if}
         </p>
       </div>
       <div class="field">

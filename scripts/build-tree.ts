@@ -1,7 +1,7 @@
 /**
  * Builds the bundled offline opening explorer from a Lichess monthly database dump.
  *
- *   npm run build-tree -- --bands 1200-1600,1600-2200 --games 5000000 --plies 12 --deep 18 --min 40
+ *   npm run build-tree -- --bands 1200-1600,1600-2200 --games 5000000 --plies 12 --deep 30 --min 40
  *
  * Streams https://database.lichess.org (curl | zstd -dc) once and keeps rated blitz/rapid/classical
  * games, sorted into rating bands by the players' average rating (up to --games per band). For every
@@ -9,6 +9,8 @@
  *   - in the first --plies half-moves for every game, and
  *   - up to --deep half-moves while the game stays on a curated library line (transpositions
  *     included) or at most one move away from one, so the human-like opponent lasts longer there.
+ *     Library lines run to about 25 half-moves, so --deep must exceed that for the opponent to
+ *     find database moves once a line ends (18 left every line's end position without data).
  * Each band is written as 256 JSON shards to public/tree/<lo>-<hi>/, plus public/tree/index.json.
  *
  * Counting uses lossy pruning (entries with tiny counts are dropped periodically) to keep memory
@@ -57,7 +59,7 @@ function parseArgs(): Opts {
     month: get('month', '2026-08'),
     games: Number(get('games', '5000000')),
     plies: Number(get('plies', '12')),
-    deep: Number(get('deep', '18')),
+    deep: Number(get('deep', '30')),
     min: Number(get('min', '40')),
     moveMin: Number(get('move-min', '5')),
     bands: get('bands', '1200-1600,1600-2200')

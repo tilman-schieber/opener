@@ -3,8 +3,51 @@
   import { auth, login, logout } from '../lib/auth/lichess.svelte.ts';
   import MiniBoard from '../components/MiniBoard.svelte';
   import { offlineBands } from '../lib/explorer/offline.ts';
+  import { exportAll, importAll, parseBackup, backupFilename, type Counts } from '../lib/store/backup.ts';
+  import { loadRepertoires } from '../lib/repertoire/store.svelte.ts';
+  import { invalidateMine } from '../lib/mygames/tree.ts';
 
   const bandsP = offlineBands();
+
+  let backupMsg = $state<{ kind: 'good' | 'bad'; text: string } | null>(null);
+  let busy = $state(false);
+
+  async function download() {
+    busy = true;
+    try {
+      const b = await exportAll();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(b)], { type: 'application/json' }));
+      a.download = backupFilename();
+      a.click();
+      URL.revokeObjectURL(a.href);
+      backupMsg = { kind: 'good', text: `Exported ${b.repertoires.length} repertoires, ${b.games.length} games, ${b.mygames.length} imported games.` };
+    } catch (e) {
+      backupMsg = { kind: 'bad', text: `Export failed: ${(e as Error).message}` };
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function restore(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const f = input.files?.[0];
+    input.value = '';
+    if (!f) return;
+    busy = true;
+    try {
+      const b = parseBackup(JSON.parse(await f.text()));
+      const n: Counts = await importAll(b, { settings: false });
+      if (b.settings) for (const k of Object.keys(settings) as (keyof typeof settings)[]) if (k in b.settings) (settings as unknown as Record<string, unknown>)[k] = b.settings[k];
+      await loadRepertoires();
+      invalidateMine();
+      backupMsg = { kind: 'good', text: `Restored ${n.repertoires} repertoires, ${n.games} games, ${n.drill} drill records and ${n.mygames} imported games${b.exportedAt ? ` from ${new Date(b.exportedAt).toLocaleString()}` : ''}.` };
+    } catch (e) {
+      backupMsg = { kind: 'bad', text: `Restore failed: ${(e as Error).message}` };
+    } finally {
+      busy = false;
+    }
+  }
 </script>
 
 <div class="page">
@@ -47,6 +90,15 @@
     {:else}
       <p>Not logged in. The explorer uses the bundled offline tree. <button class="btn small primary" onclick={login}>Log in with Lichess</button></p>
     {/if}
+    <div class="backup">
+      <p>Everything Opener knows lives in this browser. Keep a copy, or move it to another device:</p>
+      <div class="row">
+        <button class="btn" onclick={download} disabled={busy}>Export all data</button>
+        <label class="btn" class:disabled={busy}>Restore from a backup<input type="file" accept="application/json,.json" onchange={restore} disabled={busy} hidden /></label>
+        {#if backupMsg}<span class="chip {backupMsg.kind}">{backupMsg.text}</span>{/if}
+      </div>
+      <p class="muted small">The file holds your repertoires, played games and reviews, drill statistics, imported games and settings. Restoring merges: entries with the same id are replaced, everything else is kept. The Lichess login is never included.</p>
+    </div>
     {#await bandsP then bands}
       {#if bands.length}
         {#each bands as m}
@@ -67,4 +119,9 @@
   .boardpick.on { border-color: var(--blue); color: var(--ink); }
   input[type='range'] { width: 200px; }
   input[type='number'] { width: 80px; }
+  .backup { display: flex; flex-direction: column; gap: 8px; }
+  .backup label.btn { cursor: pointer; }
+  .backup label.btn.disabled { opacity: 0.45; cursor: default; }
+  .chip.good { white-space: normal; }
+  .chip.bad { white-space: normal; }
 </style>

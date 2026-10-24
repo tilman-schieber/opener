@@ -3,7 +3,7 @@ import { playLine, playUci, normalizeUci, keyOfFen, INITIAL_FEN, outcomeOf, toke
 import { addLine, emptyRoot, linesOf, positionIndex, removeAt, countLines } from './repertoire/model.ts';
 import { repertoireFromPgn } from './repertoire/importPgn.ts';
 import { pickWeighted } from './play/opponent.ts';
-import { weakness, pickLine, lineStatus } from './drill/stats.ts';
+import { weakness, pickLine, lineStatus, schedule, isDue, dueCount, dueLabel, drillStart, MAX_INTERVAL_DAYS, type LineStat } from './drill/stats.ts';
 import { treeHash, fenKey } from './chess/key.ts';
 import { judge } from './review/analyse.ts';
 import { Chess } from 'chessops/chess';
@@ -123,6 +123,74 @@ describe('drill', () => {
     let b = 0;
     for (let i = 0; i < 500; i++) if (pickLine(lines, stats).key === 'b') b++;
     expect(b).toBeGreaterThan(400);
+  });
+});
+
+describe('drill schedule', () => {
+  const DAY = 86_400_000;
+  const fresh = (key = 'k'): LineStat => ({ key, attempts: 0, fails: 0, streak: 0, lastSeen: 0, mistakes: {} });
+
+  it('doubles the interval on clean runs up to the cap and resets on a miss', () => {
+    const s = fresh();
+    const t0 = 1_000_000;
+    schedule(s, [], t0);
+    expect(s.interval).toBe(1);
+    expect(s.due).toBe(t0 + DAY);
+    schedule(s, [], t0 + DAY);
+    expect(s.interval).toBe(2);
+    schedule(s, [], t0 + 3 * DAY);
+    expect(s.interval).toBe(4);
+    for (let i = 0; i < 10; i++) schedule(s, [], t0 + 100 * DAY);
+    expect(s.interval).toBe(MAX_INTERVAL_DAYS);
+    schedule(s, [3], t0 + 200 * DAY);
+    expect(s.interval).toBe(1);
+    expect(s.due).toBe(t0 + 200 * DAY);
+    expect(isDue(s, t0 + 200 * DAY)).toBe(true);
+    expect(s.mistakes[3]).toBe(1);
+  });
+
+  it('treats unseen lines and records without a due date as due', () => {
+    expect(isDue(undefined)).toBe(true);
+    expect(isDue(fresh())).toBe(true);
+    const s = { ...fresh(), due: Date.now() + DAY };
+    expect(isDue(s)).toBe(false);
+    expect(dueLabel(s)).toBe('due tomorrow');
+    expect(dueLabel({ ...fresh(), due: Date.now() + 4 * DAY })).toBe('due in 4 d');
+    expect(dueLabel(undefined)).toBe('due');
+  });
+
+  it('picks only due lines while any are due, and anything otherwise', () => {
+    const now = Date.now();
+    const lines = ['a', 'b', 'c'].map((key) => ({ key, sans: [], ucis: [] }));
+    const stats = new Map<string, LineStat>([
+      ['a', { ...fresh('a'), due: now + DAY }],
+      ['b', { ...fresh('b'), due: now + DAY }],
+      ['c', { ...fresh('c'), due: now - 1 }],
+    ]);
+    expect(dueCount(lines, stats, now)).toBe(1);
+    for (let i = 0; i < 50; i++) expect(pickLine(lines, stats, undefined, now).key).toBe('c');
+    stats.set('c', { ...fresh('c'), due: now + DAY });
+    const seen = new Set<string>();
+    for (let i = 0; i < 200; i++) seen.add(pickLine(lines, stats, undefined, now).key);
+    expect(seen.size).toBe(3);
+  });
+
+  it('starts a drill where the line leaves its solid siblings', () => {
+    const solid = { ...fresh('s'), streak: 3, attempts: 3 };
+    const l = (key: string, ucis: string[]) => ({ key, ucis, sans: ucis });
+    const main = l('m', ['e2e4', 'e7e5', 'g1f3', 'b8c6', 'f1c4', 'f8c5']);
+    const twoKnights = l('t', ['e2e4', 'e7e5', 'g1f3', 'b8c6', 'f1c4', 'g8f6', 'd2d3']);
+    const scotch = l('x', ['e2e4', 'e7e5', 'g1f3', 'b8c6', 'd2d4']);
+    const lines = [main, twoKnights, scotch];
+    // nothing solid yet: start from move one
+    expect(drillStart(twoKnights, lines, new Map())).toBe(0);
+    // main line solid: the Two Knights drill begins at 5…Nf6, the Scotch at 4.d4
+    const stats = new Map([['m', solid]]);
+    expect(drillStart(twoKnights, lines, stats)).toBe(5);
+    expect(drillStart(scotch, lines, stats)).toBe(4);
+    // the last move of a line is always tested, even when a solid sibling shares everything before it
+    const shortMain = l('m', ['e2e4', 'e7e5', 'g1f3', 'b8c6', 'f1c4']);
+    expect(drillStart(shortMain, [shortMain, { ...twoKnights, key: 'm2' }], new Map([['m2', solid]]))).toBe(4);
   });
 });
 

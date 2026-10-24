@@ -113,6 +113,7 @@
       humanMinGames: settings.humanMinGames,
       engineElo: settings.engineElo,
       source: auth.token ? 'lichess' : 'offline',
+      offlineBand: settings.offlineBand,
       style: settings.opponentStyle,
     };
     getPlayEngine().newGame();

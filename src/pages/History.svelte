@@ -18,6 +18,7 @@
   }
 
   async function remove(id: string) {
+    if (!confirm('Delete this game and its review? This cannot be undone.')) return;
     await (await db()).delete('games', id);
     games = games?.filter((g) => g.id !== id) ?? null;
   }

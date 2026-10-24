@@ -6,6 +6,7 @@ import { pickWeighted, chooseMove, newStage, outOfDb, MAX_DB_MISSES, type Oppone
 import { weakness, pickLine, lineStatus } from './drill/stats.ts';
 import { treeHash, fenKey } from './chess/key.ts';
 import { judge } from './review/analyse.ts';
+import { resultFor } from './mygames/import.ts';
 import { Chess } from 'chessops/chess';
 
 describe('moves', () => {
@@ -178,5 +179,18 @@ describe('review', () => {
     expect(judge(6)).toBe('inaccuracy');
     expect(judge(12)).toBe('mistake');
     expect(judge(40)).toBe('blunder');
+  });
+});
+
+describe('my games import', () => {
+  it('scores PGN results from the player\'s side and skips unfinished games', () => {
+    expect(resultFor('1-0', 'white')).toBe('win');
+    expect(resultFor('1-0', 'black')).toBe('loss');
+    expect(resultFor('0-1', 'black')).toBe('win');
+    expect(resultFor('0-1', 'white')).toBe('loss');
+    expect(resultFor('1/2-1/2', 'black')).toBe('draw');
+    expect(resultFor('*', 'white')).toBeUndefined();
+    expect(resultFor('*', 'black')).toBeUndefined();
+    expect(resultFor(undefined, 'white')).toBeUndefined();
   });
 });

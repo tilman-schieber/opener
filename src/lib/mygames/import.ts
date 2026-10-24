@@ -119,7 +119,15 @@ export async function importChessCom(username: string, max: number, onProgress: 
   return count;
 }
 
-/** Imports games from PGN text as "my games"; `player` decides the color (falls back to White). */
+/** Result from the player's point of view; undefined for unfinished or unknown results. */
+export function resultFor(pgnResult: string | undefined, color: 'white' | 'black'): ImportedGame['result'] | undefined {
+  if (pgnResult === '1/2-1/2') return 'draw';
+  if (pgnResult === '1-0') return color === 'white' ? 'win' : 'loss';
+  if (pgnResult === '0-1') return color === 'black' ? 'win' : 'loss';
+  return undefined;
+}
+
+/** Imports games from PGN text as "my games"; `player` decides the color (falls back to White). Unfinished games are skipped. */
 export async function importPgnGames(text: string, label: string, player: string): Promise<number> {
   const games: ImportedGame[] = [];
   const p = player.trim().toLowerCase();
@@ -127,14 +135,15 @@ export async function importPgnGames(text: string, label: string, player: string
     const white = (g.headers.get('White') ?? '').toLowerCase();
     const black = (g.headers.get('Black') ?? '').toLowerCase();
     const color = p && black.includes(p) && !white.includes(p) ? 'black' : 'white';
-    const r = g.headers.get('Result');
+    const result = resultFor(g.headers.get('Result'), color);
+    if (!result) return;
     const sans: string[] = [];
     for (const n of g.moves.mainline()) sans.push(n.san);
     games.push({
       id: `pgn:${label}:${i}`,
       account: `pgn:${label}`,
       color,
-      result: r === '1/2-1/2' ? 'draw' : (r === '1-0') === (color === 'white') ? (r === '*' ? 'draw' : 'win') : 'loss',
+      result,
       moves: ucisFromSans(sans),
       date: Date.parse((g.headers.get('Date') ?? '').replace(/\./g, '-')) || Date.now(),
       opponent: g.headers.get(color === 'white' ? 'Black' : 'White') ?? '?',

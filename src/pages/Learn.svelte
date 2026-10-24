@@ -48,7 +48,7 @@
     db = null;
     if (!f) return;
     let live = true;
-    humanQuery({ source: auth.token ? 'lichess' : 'offline', humanRating: settings.humanRating }, f)
+    humanQuery({ source: auth.token ? 'lichess' : 'offline', humanRating: settings.humanRating, offlineBand: settings.offlineBand }, f)
       .then((d) => live && (db = d))
       .catch(() => {});
     return () => (live = false);

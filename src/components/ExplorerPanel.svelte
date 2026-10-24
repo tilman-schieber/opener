@@ -154,12 +154,13 @@
     <div class="row src-note">
       {#if bands.length > 1}
         <div class="seg" role="group" aria-label="Rating band">
+          <button class:on={settings.offlineBand === null} title="Follow the human-like opponent rating" onclick={() => (settings.offlineBand = null)}>Auto</button>
           {#each bands as b}
-            <button class:on={b.id === band.id} onclick={() => (settings.offlineBand = b.id)}>{b.ratings[0]}–{b.ratings[1]}</button>
+            <button class:on={settings.offlineBand === b.id} onclick={() => (settings.offlineBand = b.id)}>{b.ratings[0]}–{b.ratings[1]}</button>
           {/each}
         </div>
       {/if}
-      <span class="faint small">{fmt(band.games)} Lichess games{bands.length > 1 ? '' : ` rated ${band.ratings[0]}–${band.ratings[1]}`}</span>
+      <span class="faint small">{fmt(band.games)} Lichess games rated {band.ratings[0]}–{band.ratings[1]}</span>
     </div>
   {/if}
 

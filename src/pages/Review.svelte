@@ -26,6 +26,7 @@
   let progress = $state<[number, number] | null>(null);
   let engineOn = $state(false);
   let analysis = $state<Analysis | null>(null);
+  let reviewError = $state<string | null>(null);
 
   db()
     .then((d) => d.get('games', id))
@@ -38,11 +39,17 @@
 
   async function runReview() {
     if (!game) return;
+    reviewError = null;
     progress = [0, game.moves.length + 1];
-    const review = await analyseGame(game.moves, 14, (d, t) => (progress = [d, t]));
-    game.review = review;
-    await (await db()).put('games', $state.snapshot(game) as PlayedGame);
-    progress = null;
+    try {
+      const review = await analyseGame(game.moves, 14, (d, t) => (progress = [d, t]));
+      game.review = review;
+      await (await db()).put('games', $state.snapshot(game) as PlayedGame);
+    } catch (e) {
+      reviewError = (e as Error).message;
+    } finally {
+      progress = null;
+    }
   }
 
   const fen = $derived(!game || cursor === 0 ? INITIAL_FEN : game.moves[cursor - 1].fen);
@@ -117,6 +124,12 @@
         <div class="sheet panel">
           <div class="small muted">Analysing with Stockfish… {progress[0]}/{progress[1]}</div>
           <div class="progress"><div style:width="{(progress[0] / progress[1]) * 100}%"></div></div>
+        </div>
+      {:else if reviewError}
+        <div class="note red row">
+          <span>Analysis failed: {reviewError}</span>
+          <span class="spacer"></span>
+          <button class="btn small" onclick={runReview}>Try again</button>
         </div>
       {/if}
       <div class="row">

@@ -16,6 +16,8 @@ export interface OpponentConfig {
   engineElo: number;
   /** 'lichess' when logged in, else 'offline' */
   source: ExplorerSource;
+  /** Offline band pinned in the explorer (null = the band closest to humanRating) */
+  offlineBand?: string | null;
   /** realistic: as often as players choose it; surprise: sidelines more often; hardest: best-scoring popular reply */
   style?: OpponentStyle;
 }
@@ -58,11 +60,11 @@ export interface OpponentDeps {
 }
 
 /** The database query the opponent and the coaching card share: human games around the chosen rating. */
-export function humanQuery(cfg: Pick<OpponentConfig, 'source' | 'humanRating'>, fen: string): Promise<ExplorerData> {
+export function humanQuery(cfg: Pick<OpponentConfig, 'source' | 'humanRating' | 'offlineBand'>, fen: string): Promise<ExplorerData> {
   return explore(
     cfg.source === 'lichess'
       ? { source: 'lichess', fen, ratings: ratingBands(cfg.humanRating), speeds: ['blitz', 'rapid', 'classical'] }
-      : { source: 'offline', fen, rating: cfg.humanRating },
+      : { source: 'offline', fen, rating: cfg.humanRating, band: cfg.offlineBand },
   );
 }
 

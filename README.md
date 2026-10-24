@@ -25,7 +25,9 @@ Opener is a client-side web app for learning chess openings by **playing them**,
 - **My games:** import your Lichess or Chess.com games, or a PGN file, and browse an openingtree-style tree of how you
   actually play and score.
 
-Everything runs in the browser. Data lives in IndexedDB and localStorage, and there is no backend.
+Everything runs in the browser. Data lives in IndexedDB and localStorage, and there is no backend. The site is an
+installable web app: a service worker caches the app shell at first visit and everything else (fonts, engine, explorer
+tree, opening names) as it is used, so what you have opened once keeps working offline.
 
 ## Run
 
@@ -72,15 +74,17 @@ node scripts/check-library.ts --depth 14   # Stockfish flags moves in lines that
 npm run deploy     # builds and force-pushes dist/ to the gh-pages branch (GitHub Pages serves it)
 ```
 
-GitHub Pages can't send the cross-origin isolation headers, so the live site runs the single-threaded engine, which
-the app picks automatically. On a host that can send headers (Netlify, Cloudflare Pages via `public/_headers`), use
+The multi-threaded engine needs cross-origin isolation (`SharedArrayBuffer`). The service worker adds the two headers
 
 ```
 Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 ```
 
-to get the multi-threaded engine.
+to every same-origin response, so the live site gets the threaded engine on GitHub Pages too, after one automatic
+reload on the very first visit. Hosts that can send headers themselves (Netlify, Cloudflare Pages via
+`public/_headers`) don't need the reload. The worker (`src/sw.js`) is built into `dist/sw.js` by the plugin in
+`vite.config.ts`; a deploy shows up as a "new version ready" banner that reloads when the user chooses.
 
 ## Design
 

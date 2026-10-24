@@ -10,18 +10,34 @@ interface OpenerDB extends DBSchema {
   drill: { key: string; value: LineStat };
   mygames: { key: string; value: ImportedGame; indexes: { account: string } };
   explorer: { key: string; value: { key: string; data: unknown; at: number } };
+  /** Engine evaluations by position key, shared by every review (openings repeat across games) */
+  evals: { key: string; value: CachedEval };
+}
+
+export interface CachedEval {
+  /** transposition-safe position key */
+  key: string;
+  depth: number;
+  cp?: number;
+  mate?: number;
+  /** best move, UCI */
+  best?: string;
+  at: number;
 }
 
 let dbp: Promise<IDBPDatabase<OpenerDB>> | null = null;
 
 export function db(): Promise<IDBPDatabase<OpenerDB>> {
-  dbp ??= openDB<OpenerDB>('opener', 1, {
-    upgrade(d) {
-      d.createObjectStore('repertoires', { keyPath: 'id' });
-      d.createObjectStore('games', { keyPath: 'id' }).createIndex('date', 'date');
-      d.createObjectStore('drill', { keyPath: 'key' });
-      d.createObjectStore('mygames', { keyPath: 'id' }).createIndex('account', 'account');
-      d.createObjectStore('explorer', { keyPath: 'key' });
+  dbp ??= openDB<OpenerDB>('opener', 2, {
+    upgrade(d, oldVersion) {
+      if (oldVersion < 1) {
+        d.createObjectStore('repertoires', { keyPath: 'id' });
+        d.createObjectStore('games', { keyPath: 'id' }).createIndex('date', 'date');
+        d.createObjectStore('drill', { keyPath: 'key' });
+        d.createObjectStore('mygames', { keyPath: 'id' }).createIndex('account', 'account');
+        d.createObjectStore('explorer', { keyPath: 'key' });
+      }
+      if (oldVersion < 2) d.createObjectStore('evals', { keyPath: 'key' });
     },
   });
   return dbp;

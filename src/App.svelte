@@ -19,6 +19,7 @@
   import PreviewPopover from './components/PreviewPopover.svelte';
   import { preview } from './lib/preview.svelte.ts';
   import Icon from './components/Icon.svelte';
+  import { appUpdate, applyUpdate } from './lib/sw.svelte.ts';
 
   completeLogin().then(loadAccount);
   loadRepertoires();
@@ -121,6 +122,9 @@
   {#if auth.error}
     <div class="banner">{auth.error} <button class="btn ghost small" onclick={() => (auth.error = null)}>Dismiss</button></div>
   {/if}
+  {#if appUpdate.ready}
+    <div class="banner update">A new version of Opener is ready. <button class="btn small" onclick={applyUpdate}>Reload</button> <button class="btn ghost small" onclick={() => (appUpdate.ready = false)}>Later</button></div>
+  {/if}
 
   <main>
     {#key route.path.join('/')}
@@ -211,6 +215,7 @@
   footer { padding: 18px 24px; text-align: center; border-top: 1px solid var(--rule); }
   footer :global(a) { color: var(--ink-2); text-decoration: underline; text-decoration-color: var(--rule-strong); }
   .banner { background: var(--amber-wash); color: var(--amber); padding: 8px 24px; font-weight: 500; display: flex; align-items: center; gap: 10px; }
+  .banner.update { background: var(--blue-wash); color: var(--blue); }
   @media (max-width: 960px) {
     .topbar { gap: 12px; padding: 0 16px; }
     .menu-btn { display: inline-flex; }

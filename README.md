@@ -74,6 +74,9 @@ node scripts/check-library.ts --depth 14   # Stockfish flags moves in lines that
 npm run deploy     # builds and force-pushes dist/ to the gh-pages branch (GitHub Pages serves it)
 ```
 
+The same happens automatically: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs the typecheck, tests and
+build on every push and pull request, and publishes `dist/` to `gh-pages` on every push to `main`.
+
 GitHub Pages can't send the cross-origin isolation headers, so the live site runs the single-threaded engine, which
 the app picks automatically. On a host that can send headers (Netlify, Cloudflare Pages via `public/_headers`), use
 
@@ -106,3 +109,10 @@ src/lib/mygames/      game import + personal opening tree
 src/pages/            Library, OpeningDetail, Explore, Play, Drill, Repertoires, RepertoireEdit, History, Review, MyGames, Settings
 scripts/              build-tree, build-openings, check-library, copy-engine
 ```
+
+## License
+
+Opener is free software under the [GNU GPL v3 or later](LICENSE). The board ([chessground](https://github.com/lichess-org/chessground)),
+the move generator ([chessops](https://github.com/niklasf/chessops)) and the engine ([Stockfish.js](https://github.com/nmrugg/stockfish.js))
+are GPL-3.0 themselves, so the app has to be, too. Opening names are CC0, and the bundled explorer tree is derived from the
+Lichess open database (CC0).

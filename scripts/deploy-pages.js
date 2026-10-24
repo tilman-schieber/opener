@@ -3,7 +3,10 @@ import { execSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 
 const run = (cmd, cwd = 'dist') => execSync(cmd, { cwd, stdio: 'inherit' });
-const remote = execSync('git remote get-url origin').toString().trim();
+// In GitHub Actions, GITHUB_TOKEN authenticates the push (the fresh dist/.git has no credentials of its own).
+const remote = process.env.GITHUB_TOKEN
+  ? `https://x-access-token:${process.env.GITHUB_TOKEN}@github.com/${process.env.GITHUB_REPOSITORY}.git`
+  : execSync('git remote get-url origin').toString().trim();
 const sha = execSync('git rev-parse --short HEAD').toString().trim();
 
 writeFileSync('dist/.nojekyll', '');

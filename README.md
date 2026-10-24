@@ -16,8 +16,9 @@ Opener is a client-side web app for learning chess openings by **playing them**,
   tree, the live Lichess and Masters databases (after "Log in with Lichess"), and your own games.
 - **Key ideas:** curated plans, opponent plans, pawn structures, traps and position notes for 40 openings. They are
   matched by position, so they also appear after transpositions.
-- **Drill:** play your side of a line from memory. Lines you miss come back more often. There is no strict
-  spaced-repetition schedule.
+- **Drill:** play your side of a line from memory. A clean run doubles the time until the line is due again (1, 2, 4
+  … up to 60 days); a miss makes it due at once. Moves shared with lines you already know are played for you, so a
+  drill starts where lines diverge.
 - **Review:** after a game, Stockfish shows an eval graph, your mistakes and blunders, where you left the book, and
   one click adds your move to your repertoire.
 - **Repertoires:** build lines by playing moves on the board, copy library openings, or import PGN or a Lichess

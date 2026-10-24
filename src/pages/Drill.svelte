@@ -6,7 +6,7 @@
   import { route, href } from '../lib/router.svelte.ts';
   import { findRepertoire, repertoires } from '../lib/repertoire/store.svelte.ts';
   import { linesOf, nodeAt, type RepLine } from '../lib/repertoire/model.ts';
-  import { statsFor, recordRun, pickLine, lineStatus, type LineStat } from '../lib/drill/stats.ts';
+  import { statsFor, recordRun, pickLine, lineStatus, dueCount, dueLabel, drillStart, type LineStat } from '../lib/drill/stats.ts';
   import { INITIAL_FEN, playUci, formatLine, type Ply } from '../lib/chess/moves.ts';
   import type { DrawShape } from 'chessground/draw';
   import type { Key } from 'chessground/types';
@@ -35,16 +35,20 @@
   let feedback = $state<{ kind: 'good' | 'bad' | 'info'; text: string } | null>(null);
   let done = $state(false);
   let session = $state({ lines: 0, perfect: 0 });
+  /** Plies played automatically before the test starts (shared with lines already solid) */
+  let startPly = $state(0);
   let token = 0;
 
   const color = $derived(rep?.color ?? 'white');
   const ply = $derived(plies.length);
-  const myTurn = $derived(active && !done && line !== null && ply < line.ucis.length && (ply % 2 === 0 ? 'white' : 'black') === color);
+  const myTurn = $derived(active && !done && line !== null && ply >= startPly && ply < line.ucis.length && (ply % 2 === 0 ? 'white' : 'black') === color);
+  const due = $derived(dueCount(lines, stats));
 
   function begin(specific?: RepLine) {
     if (!lines.length) return;
     active = true;
     line = specific ?? pickLine(lines, stats, line?.key);
+    startPly = drillStart(line, lines, stats);
     plies = [];
     fen = INITIAL_FEN;
     mistakes = [];
@@ -59,15 +63,19 @@
     const t = token;
     if (!line || done) return;
     if (plies.length >= line.ucis.length) return complete();
-    if ((plies.length % 2 === 0 ? 'white' : 'black') !== color) {
-      setTimeout(() => {
+    const shared = plies.length < startPly;
+    const opponentTurn = (plies.length % 2 === 0 ? 'white' : 'black') !== color;
+    if (!shared && !opponentTurn) return;
+    setTimeout(
+      () => {
         if (t !== token || !line) return;
         const p = playUci(fen, line.ucis[plies.length]);
         if (!p) return;
         advance(p);
         autoplay();
-      }, plies.length === 0 ? 350 : 450);
-    }
+      },
+      shared ? 160 : plies.length === 0 ? 350 : 450,
+    );
   }
 
   function advance(p: Ply) {
@@ -81,7 +89,7 @@
     const p = playUci(fen, uci);
     if (!p) return;
     if (p.uci === expected) {
-      if (wrongHere === 0) feedback = { kind: 'good', text: `${p.san} is correct.` };
+      feedback = wrongHere === 0 ? { kind: 'good', text: `${p.san} is correct.` } : { kind: 'info', text: `${p.san}. Carry on with the line.` };
       wrongHere = 0;
       advance(p);
       autoplay();
@@ -129,16 +137,18 @@
 {#if !active}
   <div class="setup card">
     <h1>Drill your lines</h1>
-    <p class="muted">Play your side of each line from memory. Lines you miss come back more often; solid lines fade into the background. There is no fixed schedule.</p>
+    <p class="muted">Play your side of each line from memory. A clean run doubles the time until a line comes back (one day, two, four, up to two months); a miss brings it back at once. Moves a line shares with lines you already know are played for you, so the test starts where lines diverge.</p>
     <RepPicker bind:value={repId} />
     {#if rep}
       <div class="row">
+        <span class="chip {due ? 'accent' : ''}">{due} due</span>
         <span class="chip">{counts.new} new</span>
         <span class="chip bad">{counts.weak} weak</span>
         <span class="chip warn">{counts.learning} learning</span>
         <span class="chip good">{counts.solid} solid</span>
       </div>
-      <button class="btn primary lg" onclick={() => begin()} disabled={!lines.length}>Start drilling</button>
+      <button class="btn primary lg" onclick={() => begin()} disabled={!lines.length}>{due ? `Drill ${due} due line${due === 1 ? '' : 's'}` : 'Start drilling'}</button>
+      {#if lines.length && !due}<p class="muted small">Nothing is due. Start anyway to go over the weakest lines, or pick one below.</p>{/if}
       <div class="linelist">
         {#each lines as l}
           {@const s = stats.get(l.key)}
@@ -149,6 +159,7 @@
             <span class="mono small muted">{formatLine(l.sans.slice(0, 12))}{l.sans.length > 12 ? ' …' : ''}</span>
             <span class="spacer"></span>
             {#if s}<span class="small muted">{s.attempts - s.fails}/{s.attempts}</span>{/if}
+            <span class="small {st === 'new' || dueLabel(s) === 'due' ? 'duenow' : 'faint'}">{dueLabel(s)}</span>
           </button>
         {/each}
       </div>
@@ -159,7 +170,7 @@
     <div class="left">
       <div class="status {feedback?.kind === 'info' ? 'book' : (feedback?.kind ?? '')}">
         <span class="dot"></span>
-        {#if feedback}{feedback.text}{:else if myTurn}Your move. Play the repertoire move.{:else}…{/if}
+        {#if feedback}{feedback.text}{:else if myTurn}Your move. Play the repertoire move.{:else if ply < startPly}Playing the moves you already know…{:else}…{/if}
       </div>
       <Board {fen} orientation={color} movable={myTurn ? color : null} lastMove={plies[plies.length - 1]?.uci} {onmove} {shapes} {flash} />
       <div class="row">
@@ -179,7 +190,7 @@
         {#if line}
           <p class="lname">{line.name ?? 'Repertoire line'}</p>
           <div class="progress"><div style:width="{(ply / line.ucis.length) * 100}%"></div></div>
-          <p class="small muted">Move {Math.floor(ply / 2) + 1} of {Math.ceil(line.ucis.length / 2)}</p>
+          <p class="small muted">Move {Math.floor(ply / 2) + 1} of {Math.ceil(line.ucis.length / 2)}{#if startPly}{' · '}the first {Math.ceil(startPly / 2)} moves are shared with lines you know{/if}</p>
         {/if}
         <MoveList plies={plies} cursor={plies.length} keys={false} marks={plies.map((_, i) => (mistakes.includes(i) ? 'left-book' : undefined))} empty="The line starts…" />
       </div>
@@ -199,6 +210,7 @@
   .lrow { display: flex; align-items: center; gap: 10px; padding: 8px 4px; border: 0; border-bottom: 1px solid var(--rule); background: none; font: inherit; color: var(--ink); cursor: pointer; text-align: left; }
   .lrow:hover { background: var(--sheet-2); }
   .lname { font-weight: 600; }
+  .duenow { color: var(--blue); font-weight: 600; white-space: nowrap; }
   .progress { height: 8px; background: var(--sheet-2); border-radius: 99px; overflow: hidden; margin: 6px 0; }
   .progress div { height: 100%; background: var(--blue); transition: width 0.3s; }
 </style>

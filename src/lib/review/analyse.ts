@@ -1,7 +1,29 @@
 import { getAnalysisEngine, winPercent } from '../engine/engine.ts';
-import { INITIAL_FEN, outcomeOf, uciToSan } from '../chess/moves.ts';
+import { INITIAL_FEN, keyOfFen, outcomeOf, uciToSan } from '../chess/moves.ts';
+import { db, type CachedEval } from '../store/db.ts';
 import type { PlayedMove } from '../play/types.ts';
 import type { Judgement, ReviewData } from './types.ts';
+
+type Eval = { cp?: number; mate?: number; best?: string };
+
+/**
+ * Evaluates a position at least `depth` deep, reusing a stored evaluation when one exists. Opening
+ * positions repeat across games, so after a few reviews most book plies cost nothing.
+ */
+export async function evaluate(fen: string, depth: number): Promise<Eval> {
+  const key = keyOfFen(fen);
+  const store = await db().catch(() => null);
+  const hit = store ? await store.get('evals', key).catch(() => undefined) : undefined;
+  if (hit && hit.depth >= depth) return { cp: hit.cp, mate: hit.mate, best: hit.best };
+  const a = await getAnalysisEngine().go(fen, { depth });
+  const l = a.lines[0];
+  const e: Eval = l ? { cp: l.cp, mate: l.mate, best: a.bestmove } : { best: a.bestmove };
+  if (store && l) {
+    const row: CachedEval = { key, depth: a.depth || depth, cp: e.cp, mate: e.mate, best: e.best, at: Date.now() };
+    store.put('evals', row).catch(() => {});
+  }
+  return e;
+}
 
 /** Lichess thresholds on winning chances (converted from [-1, 1] to percentage points). */
 export function judge(loss: number): Judgement | undefined {
@@ -12,13 +34,10 @@ export function judge(loss: number): Judgement | undefined {
 }
 
 export async function analyseGame(moves: PlayedMove[], depth: number, onProgress: (done: number, total: number) => void): Promise<ReviewData> {
-  const engine = getAnalysisEngine();
   const fens = [INITIAL_FEN, ...moves.map((m) => m.fen)];
-  const evals: { cp?: number; mate?: number; best?: string }[] = [];
+  const evals: Eval[] = [];
   for (let i = 0; i < fens.length; i++) {
-    const a = await engine.go(fens[i], { depth });
-    const l = a.lines[0];
-    evals.push(l ? { cp: l.cp, mate: l.mate, best: a.bestmove } : { best: a.bestmove });
+    evals.push(await evaluate(fens[i], depth));
     onProgress(i + 1, fens.length);
   }
   // A position with no legal moves has no engine line; fill in from the game result

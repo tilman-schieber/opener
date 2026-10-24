@@ -114,6 +114,7 @@
       humanMinGames: settings.humanMinGames,
       engineElo: settings.engineElo,
       source: auth.token ? 'lichess' : 'offline',
+      offlineBand: settings.offlineBand,
       style: settings.opponentStyle,
     };
     getPlayEngine().newGame();
@@ -217,7 +218,7 @@
     return explore(
       config.source === 'lichess'
         ? { source: 'lichess', fen, ratings: ratingBands(config.humanRating), speeds: ['blitz', 'rapid', 'classical'] }
-        : { source: 'offline', fen, rating: config.humanRating },
+        : { source: 'offline', fen, rating: config.humanRating, band: config.offlineBand },
     );
   }
 

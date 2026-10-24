@@ -52,7 +52,7 @@
     explore(
       auth.token
         ? { source: 'lichess', fen: f, ratings: ratingBands(settings.humanRating), speeds: ['blitz', 'rapid', 'classical'] }
-        : { source: 'offline', fen: f, rating: settings.humanRating },
+        : { source: 'offline', fen: f, rating: settings.humanRating, band: settings.offlineBand },
     )
       .then((d) => live && (db = d))
       .catch(() => {});

@@ -11,6 +11,7 @@
   }
 
   let { fen, enabled, multipv = 3, depth = 20, analysis = $bindable(null) }: Props = $props();
+  let error = $state<string | null>(null);
 
   $effect(() => {
     if (!enabled) {
@@ -19,6 +20,7 @@
     }
     const f = fen;
     let live = true;
+    error = null;
     const engine = getAnalysisEngine();
     engine
       .analyse(f, {
@@ -30,6 +32,9 @@
       })
       .then((a) => {
         if (live && a.lines.length) analysis = a;
+      })
+      .catch((e: Error) => {
+        if (live) error = e.message;
       });
     return () => {
       live = false;
@@ -66,6 +71,8 @@
         </div>
       {/each}
       <div class="muted small">depth {analysis.depth} · Stockfish 19 lite</div>
+    {:else if error}
+      <div class="chip bad">{error}</div>
     {:else}
       <div class="muted small">Thinking…</div>
     {/if}

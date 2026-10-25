@@ -14,16 +14,27 @@
   let q = $state('');
   let side = $state<'all' | 'white' | 'black'>('all');
 
-  const GROUPS = [
-    { id: 'white-e4', title: 'White, 1.e4' },
-    { id: 'white-d4', title: 'White, 1.d4' },
-    { id: 'white-flank', title: 'White, flank openings' },
-    { id: 'black-e4', title: 'Black against 1.e4' },
-    { id: 'black-d4', title: 'Black against 1.d4 and 1.c4' },
+  // Cards: openings by the side you play, then by family
+  const SIDES = [
+    { side: 'white', title: 'Openings for White', families: [['white-e4', 'With 1.e4'], ['white-d4', 'With 1.d4'], ['white-flank', 'Flank openings']] },
+    { side: 'black', title: 'Openings for Black', families: [['black-e4', 'Against 1.e4'], ['black-d4', 'Against 1.d4 and 1.c4']] },
   ] as const;
 
   // ---------------------------------------------------------------- tree view
   const fullTree = buildOpeningTree(OPENINGS);
+  /**
+   * For gambits and sidelines: the opening they branch off from, shown as "sideline of …". Only a real
+   * opening for the same side counts, and only one defined by at least three half-moves, so the London
+   * System (1.d4) is not the parent of every 1.d4 opening and bare tree positions never are.
+   */
+  const parents = new Map<string, LibraryOpening>();
+  for (const o of OPENINGS) {
+    const crumbs = pathTo(fullTree, o.id);
+    for (let i = crumbs.length - 1; i >= 0 && !parents.has(o.id); i--) {
+      const it = crumbs[i].items.find((x) => x.id !== o.id && x.side === o.side && crumbs[i].path.length >= 3);
+      if (it) parents.set(o.id, it);
+    }
+  }
   let namesReady = $state(false);
   loadNames().then(() => (namesReady = true));
 
@@ -99,8 +110,8 @@
   <section class="stack">
     <div class="row filters">
       <div class="seg" role="group" aria-label="View">
-        <button class:on={settings.libraryView === 'tree'} onclick={() => (settings.libraryView = 'tree')}>Move tree</button>
-        <button class:on={settings.libraryView === 'cards'} onclick={() => (settings.libraryView = 'cards')}>Cards</button>
+        <button class:on={settings.libraryLayout === 'cards'} onclick={() => (settings.libraryLayout = 'cards')}>Cards</button>
+        <button class:on={settings.libraryLayout === 'tree'} onclick={() => (settings.libraryLayout = 'tree')}>Move tree</button>
       </div>
       <div class="seg" role="group" aria-label="Side">
         <button class:on={side === 'all'} onclick={() => (side = 'all')}>All</button>
@@ -112,7 +123,7 @@
       <span class="faint small">{filtered.length} openings</span>
     </div>
 
-    {#if settings.libraryView === 'tree'}
+    {#if settings.libraryLayout === 'tree'}
       <div class="treeview">
         <div class="sheet treebox">
           {#if tree}
@@ -127,19 +138,27 @@
         <OpeningPreview {sel} {namesReady} onpick={pick} />
       </div>
     {:else}
-    {#each GROUPS as g}
-      {@const items = filtered.filter((o) => o.group === g.id)}
-      {#if items.length}
-        <div class="group">
-          <h2>{g.title}</h2>
-          <div class="grid">
-            {#each items as o (o.id)}
-              <OpeningCard {o} />
+      {#each SIDES as s}
+        {@const mine = filtered.filter((o) => o.side === s.side)}
+        {#if mine.length}
+          <section class="sidegroup">
+            <h2><span class="sw {s.side}"></span>{s.title} <span class="faint count">{mine.length}</span></h2>
+            {#each s.families as [id, title]}
+              {@const items = mine.filter((o) => o.group === id)}
+              {#if items.length}
+                <div class="family">
+                  <h3 class="label">{title}</h3>
+                  <div class="grid">
+                    {#each items as o (o.id)}
+                      <OpeningCard {o} parent={parents.get(o.id)} />
+                    {/each}
+                  </div>
+                </div>
+              {/if}
             {/each}
-          </div>
-        </div>
-      {/if}
-    {/each}
+          </section>
+        {/if}
+      {/each}
     {/if}
     {#if !filtered.length}<p class="muted">No opening matches “{q}”.</p>{/if}
   </section>
@@ -147,9 +166,12 @@
 
 <style>
   .intro { display: flex; align-items: flex-end; gap: 24px; justify-content: space-between; flex-wrap: wrap; padding-bottom: 4px; }
-  .group { display: flex; flex-direction: column; gap: 12px; padding-top: 8px; }
-  .group h2 { font-size: 1.25rem; border-bottom: 1px solid var(--rule); padding-bottom: 6px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+  .sidegroup { display: flex; flex-direction: column; gap: 16px; padding-top: 10px; }
+  .sidegroup h2 { font-size: 1.4rem; border-bottom: 1px solid var(--rule-strong); padding-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+  .sidegroup h2 .sw { width: 14px; height: 14px; }
+  .count { font-family: var(--font-body); font-size: 0.9rem; font-weight: 400; }
+  .family { display: flex; flex-direction: column; gap: 10px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px; }
   .reps { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
   .rep { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
   .rname { font-family: var(--font-display); font-size: 1.1rem; color: var(--ink); }
